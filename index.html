@@ -1,0 +1,1486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Practise German right-of-way rules (Rechts vor Links, StVO) by driving through junctions: map, third-person and first-person views, German examiner voice.">
+<meta name="theme-color" content="#f2b705">
+<title>Rechts vor Links</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+html{color-scheme:light}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px system-ui,sans-serif}
+img{max-width:100%}
+</style>
+<style>
+/* Layout: square road canvas as the stage, a signpost-style panel beside it; stacks on phones. */
+:root{
+  --bg:#eceee9; --surface:#ffffff; --surface-2:#f5f6f3; --ink:#1b1f1d; --muted:#5b645f; --line:#d6dad4;
+  --accent:#f2b705; --accent-ink:#1b1f1d; --ok:#1d8648; --bad:#c8102e; --info:#1f5aa6;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111412; --surface:#1a1e1c; --surface-2:#202522; --ink:#e7ebe8; --muted:#9aa49e; --line:#2e3531;
+  --accent:#f2b705; --accent-ink:#1b1f1d; --ok:#43c27a; --bad:#ff5d70; --info:#76a8ee; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111412; --surface:#1a1e1c; --surface-2:#202522; --ink:#e7ebe8; --muted:#9aa49e; --line:#2e3531;
+  --accent:#f2b705; --accent-ink:#1b1f1d; --ok:#43c27a; --bad:#ff5d70; --info:#76a8ee; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line)}
+.tabs button{border:0;border-radius:6px 6px 0 0;background:transparent;padding:9px 16px;font-family:var(--f-display);font-size:19px;letter-spacing:.02em;text-transform:uppercase;color:var(--muted);margin-bottom:-2px;border-bottom:3px solid transparent}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.courseview{display:flex;flex-direction:column;gap:12px}
+.instr{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+.ibox{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;min-width:0}
+.ibox.wide{grid-column:1/-1}
+.ibox h2{font-family:var(--f-display);font-size:26px;margin:0 0 8px;text-wrap:balance}
+.ibox p{max-width:70ch}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.ibox .ladder{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+
+.play.isfs{position:fixed;inset:0;z-index:50;background:#111412;padding:10px;gap:8px;max-width:none}
+.play.isfs .canvas-wrap{flex:1;min-height:0;max-width:none;width:100%;aspect-ratio:auto;border-radius:6px}
+.play.isfs .touch{max-width:none}
+.play.isfs{position:fixed}
+body.fs-lock{overflow:hidden}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:14px 32px}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand svg{flex:none}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:30px;line-height:1;margin:0;letter-spacing:.01em;text-transform:uppercase}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.picker{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,button{font:inherit;color:inherit}
+select{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 10px;max-width:100%}
+button{cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 12px;font-weight:600}
+button:hover{border-color:var(--muted)}
+button:focus-visible,select:focus-visible,canvas:focus-visible{outline:3px solid var(--info);outline-offset:2px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.progress{font-family:var(--f-display);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--muted)}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+@media (max-width:860px){.stage{grid-template-columns:minmax(0,1fr)}}
+.play{display:flex;flex-direction:column;gap:10px;min-width:0;position:relative}
+.canvas-wrap{position:relative;width:100%;max-width:680px;aspect-ratio:1;margin:0 auto;border-radius:10px;overflow:hidden;background:#9dbb7f;box-shadow:0 1px 0 var(--line),0 8px 24px rgba(0,0,0,.12)}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.canvas-wrap canvas.gl{position:absolute;inset:0;width:100%;height:100%;display:none}
+.canvas-wrap.fp{aspect-ratio:4/3;background:#bcd5e8}
+.canvas-wrap.fp canvas.gl{display:block}
+.mini{position:absolute;inset:0;z-index:1}
+.mini canvas{width:100%;height:100%}
+.minitag{display:none}
+.canvas-wrap canvas.gl{z-index:0}
+.canvas-wrap.fp .mini{inset:auto;right:10px;top:10px;width:30%;min-width:120px;max-width:260px;aspect-ratio:1;z-index:5;border:2px solid rgba(255,255,255,.95);border-radius:8px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.35);cursor:pointer;background:#9dbb7f}
+.canvas-wrap.fp .minitag{display:block;position:absolute;left:0;right:0;bottom:0;z-index:2;background:rgba(20,24,22,.75);color:#fff;font-size:11px;font-weight:700;text-align:center;padding:2px 0;pointer-events:none}
+.canvas-wrap.fp .zoom{display:none}
+.tl{z-index:6;position:absolute;left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;max-width:60%}
+.viewseg{display:inline-flex;background:rgba(20,24,22,.86);border-radius:8px;padding:3px;gap:2px}
+.viewseg button{background:transparent;color:#d9dfdb;border:0;border-radius:6px;padding:5px 12px;font-size:14px}
+.viewseg button[aria-pressed="true"]{background:#f2b705;color:#1d1f21}
+.viewbtn{background:rgba(20,24,22,.86);color:#fff;border:0;border-radius:8px;padding:7px 12px;font-size:14px}
+.viewbtn:hover{background:rgba(20,24,22,.95)}
+.fpprompt{z-index:4;position:absolute;left:10px;top:100px;max-width:calc(68% - 20px);background:rgba(20,24,22,.86);color:#fff;border-radius:8px;padding:7px 12px;font-weight:600;font-size:15px}
+.dash{z-index:4;display:none;position:absolute;left:50%;bottom:12px;transform:translateX(-50%);align-items:center;gap:12px;background:rgba(20,24,22,.88);color:#fff;border-radius:12px;padding:6px 16px;white-space:nowrap}
+.canvas-wrap.fp .dash{display:flex}
+.dash .lamp{font-size:20px;color:#4a4f45;width:20px;text-align:center}
+.dash .lamp.on{color:#ffb000;text-shadow:0 0 10px #ffb000}
+.dash .spd{font-family:var(--f-display);font-size:30px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;min-width:62px;text-align:center}
+.dash .spd small{font-size:12px;font-weight:600;margin-left:3px;color:#c9d0cb}
+.dash .dl{font-size:13px;color:#c9d0cb}
+.dash .hd{color:#fff;font-weight:700}
+.sub{position:absolute;z-index:6;left:50%;top:13%;transform:translateX(-50%);max-width:calc(100% - 24px);background:rgba(255,255,255,.95);color:#1d1f21;border-radius:8px;padding:7px 14px;font-weight:600;font-size:15px;box-shadow:0 4px 14px rgba(0,0,0,.25);text-align:center}
+.zoom{z-index:6;position:absolute;right:10px;top:10px;display:flex;align-items:center;background:rgba(20,24,22,.86);border-radius:8px;overflow:hidden;color:#fff;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums}
+.zoom button{background:transparent;color:#fff;border:0;border-radius:0;width:34px;height:32px;font-size:19px;line-height:1;padding:0}
+.zoom button:hover{background:rgba(255,255,255,.15)}
+.zoom span{min-width:42px;text-align:center}
+.toast{z-index:9;position:absolute;left:50%;top:12px;transform:translateX(-50%);background:rgba(20,24,22,.88);color:#fff;padding:7px 14px;border-radius:999px;font-weight:600;font-size:14px;white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis;pointer-events:none;transition:opacity .25s}
+.verdict{position:absolute;left:10px;right:10px;bottom:10px;max-height:calc(100% - 20px);overflow:auto;background:var(--surface);color:var(--ink);border-radius:10px;padding:16px 18px;box-shadow:0 10px 30px rgba(0,0,0,.35);border-top:6px solid var(--ok)}
+.verdict.bad{border-top-color:var(--bad)}
+.stamp{font-family:var(--f-display);font-size:34px;font-weight:700;line-height:1;text-transform:uppercase;letter-spacing:.02em;color:var(--ok);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.verdict.bad .stamp{color:var(--bad)}
+.stamp small{font-family:var(--f-body);font-size:15px;color:var(--muted);text-transform:none;letter-spacing:0;font-weight:500}
+.verdict p{margin:8px 0 0;max-width:62ch}
+.verdict .why{font-weight:600}
+.orders{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin-top:10px;font-size:14px}
+.orders dt{color:var(--muted)}
+.orders dd{margin:0;font-weight:700;font-variant-numeric:tabular-nums}
+.verdict ul{margin:8px 0 0;padding-left:18px;font-size:14px;color:var(--ink)}
+.verdict .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.touch{display:none;justify-content:flex-start;align-items:flex-end;gap:10px;max-width:680px;width:100%;margin:0 auto;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.touch .grp{display:flex;gap:8px;align-items:flex-end}
+.touch button{width:60px;height:56px;font-size:22px;touch-action:none;-webkit-tap-highlight-color:transparent;border-radius:12px}
+.touch button:active{transform:scale(.96)}
+.touch .ind{color:#c98200;font-size:24px}
+.touch .ind.on,#indL.on,#indR.on{background:#ffb000;color:#1d1f21;border-color:#ffb000}
+.touch .gas{width:76px;height:84px;background:#1d8648;color:#fff;border-color:#1d8648;font-size:16px}
+.touch .brake{width:76px;height:64px;background:#c8102e;color:#fff;border-color:#c8102e;font-size:16px}
+.touch .pedals{margin-left:auto}
+@media (max-width:440px){.touch{gap:6px}.touch .grp{gap:6px}.touch button{width:52px;height:54px}.touch .gas{width:68px;height:80px}.touch .brake{width:68px;height:60px}}
+.play.isfs .touch{position:absolute;left:12px;right:12px;bottom:12px;width:auto;z-index:7;margin:0;pointer-events:none}
+.play.isfs .sub{top:13%;bottom:auto}
+.play.isfs .touch button{pointer-events:auto;opacity:.88;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.play.isfs .dash{bottom:100px}
+.verdict{z-index:8}
+@media (hover:none),(max-width:700px){.touch{display:flex}}
+aside.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.eyebrow{margin:0;font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.panel h2{font-family:var(--f-display);font-size:28px;line-height:1.05;margin:2px 0 0;text-wrap:balance}
+.brief{margin:6px 0 0;color:var(--ink)}
+.cars{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.cars li{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer;background:var(--surface-2)}
+.cars li.active{border-color:var(--info);box-shadow:inset 0 0 0 1px var(--info)}
+.cars li.done{opacity:.55}
+.chip{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;color:#fff;font-family:var(--f-display);font-weight:700;font-size:18px}
+.cars .what{font-weight:600;line-height:1.25}
+.cars .sign{font-size:13px;color:var(--muted);line-height:1.25}
+.pill{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 7px;border-radius:999px;background:var(--line);color:var(--muted);white-space:nowrap}
+.pill.go{background:var(--info);color:#fff}
+.pill.thru{background:var(--ok);color:#fff}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.answer{background:var(--surface-2);border:1px dashed var(--line);border-radius:8px;padding:10px 12px;font-size:14px}
+.answer b{font-variant-numeric:tabular-nums}
+details{border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font-weight:700;font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin-top:10px;font-size:14px;align-items:center}
+kbd{font-family:var(--f-body);font-weight:700;font-size:12px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:1px 6px;background:var(--surface-2);white-space:nowrap}
+.ladder{margin:10px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px;font-size:14px}
+.ladder li{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:start}
+.ladder b{display:block}
+.ladder svg{width:28px;height:28px}
+.small{font-size:13px;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:7px 14px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.dots{display:flex;flex-wrap:wrap;gap:5px}
+.dot{padding:3px 0;width:38px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;border-radius:5px;background:var(--surface-2)}
+.dot.ok{background:var(--ok);color:#fff;border-color:var(--ok)}
+.dot.cur{outline:2px solid var(--info);outline-offset:1px}
+.indrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+.viewbtn .sm,.tabs .sm{display:none}
+.verdict{touch-action:pan-y}
+.canvas-wrap{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* phone layout: tall map with the controls on top of it, compact header */
+@media (hover:none),(max-width:700px){
+  body{padding-inline:10px;padding-block:8px 24px}
+  .wrap{gap:8px}
+  header.top{flex-wrap:nowrap;gap:8px}
+  .brand svg{width:28px;height:28px}
+  .brand h1{font-size:18px}
+  .brand p{display:none}
+  .tabs{border-bottom-width:0;gap:0}
+  .tabs button{font-size:15px;padding:6px 9px}
+  .picker{flex-wrap:nowrap;gap:6px}
+  .picker select{flex:1;min-width:0;font-size:14px;padding:6px 8px}
+  .picker #randomBtn{font-size:13px;padding:6px 9px;white-space:nowrap}
+  .progress{font-size:14px;white-space:nowrap}
+  .stage{gap:10px}
+  .canvas-wrap,.canvas-wrap.fp{aspect-ratio:auto;max-width:none;height:calc(100vh - 128px);height:calc(100dvh - 128px);min-height:340px;border-radius:8px;touch-action:none}
+  .touch{position:absolute;left:10px;right:10px;bottom:10px;width:auto;max-width:none;margin:0;z-index:7;pointer-events:none}
+  .touch button{pointer-events:auto;opacity:.92;box-shadow:0 3px 10px rgba(0,0,0,.3)}
+  .dash{bottom:96px}
+  .sub{top:128px;bottom:auto;font-size:13px;padding:5px 10px}
+  .brand h1{white-space:nowrap}
+  .viewbtn .lg,.tabs .lg{display:none}.viewbtn .sm,.tabs .sm{display:inline}
+  .viewbtn{font-size:13px;padding:6px 9px}
+  .viewseg button{font-size:13px;padding:5px 9px}
+  .zoom button{width:30px;height:30px;font-size:17px}.zoom span{min-width:36px;font-size:12px}
+  .verdict{left:8px;right:8px;bottom:8px;max-height:calc(100% - 16px);padding:12px 14px}
+  .stamp{font-size:28px}
+  .verdict p{font-size:14px}
+  .verdict ul{font-size:13px}
+  .verdict .row button{flex:1;min-height:44px}
+  .panel{padding:12px}
+  .panel h2{font-size:23px}
+  .actions button,.indrow button{min-height:40px}
+}
+@media (max-width:440px){.touch .grp{gap:5px}.touch{gap:6px}.touch button{width:48px;height:50px;font-size:19px}.touch .ind{font-size:21px}.touch .gas{width:62px;height:76px;font-size:15px}.touch .brake{width:62px;height:58px;font-size:14px}}
+@media (hover:none) and (orientation:landscape) and (max-height:520px){
+  .canvas-wrap,.canvas-wrap.fp{height:calc(100vh - 16px);height:calc(100dvh - 16px);min-height:0}
+  .touch button{width:52px;height:50px}.touch .gas{width:70px;height:74px}.touch .brake{width:70px;height:56px}
+  .dash{bottom:84px}
+}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect x="8" y="8" width="24" height="24" transform="rotate(45 20 20)" fill="#fff" stroke="#222" stroke-width="1"/><rect x="12.5" y="12.5" width="15" height="15" transform="rotate(45 20 20)" fill="#f2b705"/></svg>
+      <div>
+        <h1>Rechts vor Links</h1>
+        <p>Drive the cars in the order German traffic law (StVO) requires</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button type="button" role="tab" id="tabCourse" aria-selected="true" aria-controls="courseView">Course</button>
+      <button type="button" role="tab" id="tabInstr" aria-selected="false" aria-controls="instr"><span class="lg">Instructions</span><span class="sm">Help</span></button>
+    </nav>
+  </header>
+
+  <div id="courseView" role="tabpanel" aria-labelledby="tabCourse" class="courseview">
+  <div class="picker">
+    <label for="scenario" class="small" style="position:absolute;left:-9999px">Junction type</label>
+    <select id="scenario"></select>
+    <button id="randomBtn" type="button">Random round</button>
+    <span class="progress" id="progress">0 / 0</span>
+  </div>
+  <main class="stage">
+    <section class="play">
+      <div class="canvas-wrap" id="cw">
+        <div class="mini" id="mini"><span class="minitag">Tap for map</span><canvas id="cv" tabindex="0" aria-label="Top-down junction. Drive with W A S D, indicate with Q and E."></canvas></div>
+        <div class="toast" id="toast" style="opacity:0"></div>
+        <div class="tl"><div class="viewseg" role="group" aria-label="View"><button type="button" id="vMap" aria-pressed="true">Map</button><button type="button" id="vChase" aria-pressed="false" title="PPP: camera behind and above your car">PPP</button><button type="button" id="vDrv" aria-pressed="false" title="FPP: first person, from the driver's seat">FPP</button></div><button type="button" class="viewbtn" id="fsBtn"><span class="lg">Full screen (F)</span><span class="sm">Full ⤢</span></button></div>
+        <div class="fpprompt" id="fpPrompt" hidden></div>
+        <div class="dash" id="dash"></div>
+        <div class="sub" id="sub" hidden></div>
+        <div class="zoom" role="group" aria-label="Zoom"><button type="button" id="zOut" aria-label="Zoom out">−</button><span id="zLbl">150%</span><button type="button" id="zIn" aria-label="Zoom in">+</button></div>
+        <div class="verdict" id="verdict" hidden></div>
+      </div>
+      <div class="touch" id="touch">
+        <div class="grp steer"><button type="button" data-k="a" aria-label="Steer left">◀</button><button type="button" data-k="d" aria-label="Steer right">▶</button></div>
+        <div class="grp mid"><button type="button" id="tq" class="ind" aria-label="Left indicator">⇦</button><button type="button" id="te" class="ind" aria-label="Right indicator">⇨</button></div>
+        <div class="grp pedals"><button type="button" data-k="s" class="brake" aria-label="Brake">Brake</button><button type="button" data-k="w" class="gas" aria-label="Gas">Gas</button></div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div>
+        <p class="eyebrow" id="cat"></p>
+        <h2 id="title"></h2>
+        <p class="brief" id="brief"></p>
+      </div>
+      <div class="dots" id="dots" hidden></div>
+      <div class="indrow" id="indRow" hidden><span class="small">Your indicator</span><button type="button" id="indL">◀ Left (Q)</button><button type="button" id="indR">Right (E) ▶</button></div>
+      <ol class="cars" id="carlist"></ol>
+      <div class="actions">
+        <button type="button" id="hintBtn">Show priority (H)</button>
+        <button type="button" id="resetBtn">Restart (R)</button>
+        <button type="button" id="answerBtn">Show answer</button>
+        <button type="button" id="voiceBtn" aria-pressed="true">Voice: German on (M)</button>
+        <button type="button" id="assistBtn" aria-pressed="false">Steering assist: off (G)</button>
+      </div>
+      <div class="answer" id="answer" hidden></div>
+      <p class="small" style="margin:0"><kbd>W</kbd><kbd>S</kbd> drive · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Q</kbd><kbd>E</kbd> indicate · <kbd>V</kbd> Map / PPP / FPP · <kbd>F</kbd> full screen. Everything else is under <a href="#instr" id="toInstr">Instructions</a>.</p>
+    </aside>
+  </main>
+  </div>
+
+  <section id="instr" class="instr" role="tabpanel" aria-labelledby="tabInstr" hidden>
+    <div class="ibox">
+      <h2>How the course works</h2>
+      <ol class="steps">
+        <li><b>You are car A.</b> The panel and the examiner tell you your route: „Nach rechts", „Nach links" or „Geradeaus".</li>
+        <li><b>Set your indicator</b> before the junction: <kbd>Q</kbd> left, <kbd>E</kbd> right, nothing for straight on. A wrong or missing indicator counts as a mistake.</li>
+        <li><b>Read the junction:</b> signs, road markings, traffic lights or the officer, and the other cars' indicators. The arrow badge behind each car shows its intention (amber = turning, white = straight).</li>
+        <li><b>Decide:</b> drive if you have priority, wait if you don't. Your decision is judged the moment your nose enters the junction.</li>
+        <li><b>Clear the junction</b> on the road you indicated. You get „Richtig" or „Falsch" with the rule (StVO paragraph) that applied.</li>
+      </ol>
+      <p>The course has 12 junction types. Your car starts on each road in turn and does every manoeuvre from it (straight, right, left), so you see every combination. Rounds alternate between "you must wait" and "you go first" wherever the junction allows it. The other cars drive themselves and obey the same rules. Pick any junction type or round from the list and the round buttons; progress is saved in your browser.</p>
+    </div>
+    <div class="ibox">
+      <h2>Controls</h2>
+      <div class="keys">
+        <span><kbd>W</kbd> <kbd>S</kbd></span><span>Accelerate / brake and reverse</span>
+        <span><kbd>A</kbd> <kbd>D</kbd></span><span>Steer left / right</span>
+        <span><kbd>Q</kbd> <kbd>E</kbd></span><span>Left / right indicator (press again to switch off)</span>
+        <span><kbd>H</kbd></span><span>Show who must wait for whom</span>
+        <span><kbd>R</kbd> <kbd>N</kbd></span><span>Restart the round / next round</span>
+        <span><kbd>V</kbd></span><span>Cycle the views: Map, PPP (camera behind and above your car, so you see the whole junction), FPP (first person, from the driver's seat). Or use the switch on the game; in a 3D view, tap the minimap to pop the map open</span>
+        <span><kbd>←</kbd> <kbd>→</kbd></span><span>PPP / FPP: look left / right (shoulder check)</span>
+        <span><kbd>+</kbd> <kbd>−</kbd> <kbd>Z</kbd></span><span>Zoom the map</span>
+        <span><kbd>F</kbd></span><span>Full screen (Esc also exits)</span>
+        <span><kbd>G</kbd></span><span>Steering assist: the car follows its lane and turn by itself; you handle gas, brake and indicators. Steering yourself overrides it</span>
+        <span><kbd>M</kbd></span><span>German examiner voice on / off (subtitles stay on)</span>
+      </div>
+      <p class="small">On a phone the controls sit on the map: ◀ ▶ steer, ⇦ ⇨ indicators, <b>Brake</b> and <b>Gas</b>. Steering assist is on by default, so you can drive with just Gas, Brake and the indicators; pressing ◀ or ▶ takes over the steering. Tap <b>Full</b> for full screen; landscape gives the widest view.</p>
+    </div>
+    <div class="ibox wide">
+      <h2>The rules, in order of rank</h2>
+      <p class="small">A higher rule always beats a lower one: the officer beats the lights, lights beat signs, signs beat rechts vor links.</p>
+      <ol class="ladder">
+          <li><svg viewBox="0 0 28 28"><circle cx="14" cy="9" r="5" fill="#1f3a6b"/><rect x="2" y="15" width="24" height="5" rx="2.5" fill="#1f3a6b"/></svg><div><b>1. Police officer (§36)</b>Chest or back facing you = stop. Side facing you = go. Beats lights and signs.</div></li>
+          <li><svg viewBox="0 0 28 28"><rect x="9" y="1" width="10" height="26" rx="3" fill="#222"/><circle cx="14" cy="6" r="3" fill="#e33"/><circle cx="14" cy="14" r="3" fill="#555"/><circle cx="14" cy="22" r="3" fill="#2c4"/></svg><div><b>2. Traffic lights (§37)</b>Beat signs. Green-arrow plate: right turn on red only after a full stop, giving way to green traffic.</div></li>
+          <li><svg viewBox="0 0 28 28"><rect x="7" y="7" width="14" height="14" transform="rotate(45 14 14)" fill="#fff" stroke="#222" stroke-width=".8"/><rect x="9.5" y="9.5" width="9" height="9" transform="rotate(45 14 14)" fill="#f2b705"/></svg><div><b>3. Signs (§8)</b>Priority road (306) or priority at next junction (301) beats Yield (205) and Stop (206). Stop means a full standstill at the line.</div></li>
+          <li><svg viewBox="0 0 28 28"><rect x="0" y="0" width="28" height="28" rx="4" fill="#5a5f65"/><path d="M3 8 h5 l-2.5 8z M10 8 h5 l-2.5 8z M17 8 h5 l-2.5 8z" fill="#fff"/><rect x="3" y="21" width="22" height="3" fill="#fff"/></svg><div><b>Road markings</b>Shark teeth (342) and a broken give-way line (341) mean give way, just like the Yield sign. A solid stop line (294) belongs to a STOP sign or traffic light.</div></li>
+          <li><svg viewBox="0 0 28 28"><rect x="6" y="9" width="16" height="10" rx="3" fill="#2d6bd1"/><circle cx="6" cy="10" r="3" fill="#ffb000"/><circle cx="6" cy="18" r="3" fill="#ffb000"/></svg><div><b>Indicators (§9 Abs. 1)</b>Indicators show where a car is going, and that decides who crosses whose path. No indicator means straight on. Indicate early yourself.</div></li>
+          <li><svg viewBox="0 0 28 28"><path d="M4 22 L14 6 L24 22 Z" fill="#fff" stroke="#c8102e" stroke-width="3" stroke-linejoin="round"/></svg><div><b>4. Rechts vor links (§8 Abs. 1)</b>With no lights or signs, the car coming from your right goes first, also at T-junctions.</div></li>
+          <li><svg viewBox="0 0 28 28"><path d="M8 24 V12 a6 6 0 0 1 6-6 h8 M17 2 l5 4 -5 4" fill="none" stroke="currentColor" stroke-width="2.5"/></svg><div><b>Turning left (§9 Abs. 3)</b>Let oncoming traffic through first. Two cars both turning left from opposite sides may turn at the same time.</div></li>
+          <li><svg viewBox="0 0 28 28"><rect x="4" y="4" width="20" height="20" fill="#fff" stroke="#222"/><path d="M14 24 V14 H4" stroke="#222" stroke-width="3.5" fill="none"/><path d="M14 14 V4 M14 14 H24" stroke="#222" stroke-width="1.2"/></svg><div><b>Bent priority road</b>Following the bend counts as going straight. Leaving it across oncoming main-road traffic means you wait. Side roads use rechts vor links among themselves.</div></li>
+          <li><svg viewBox="0 0 28 28"><rect x="3" y="10" width="22" height="9" rx="3" fill="#fff" stroke="#888"/><rect x="9" y="7" width="4" height="4" fill="#2a63ff"/><rect x="15" y="7" width="4" height="4" fill="#2a63ff"/></svg><div><b>Blue lights &amp; siren (§38)</b>Everyone makes way, whatever the lights or signs say.</div></li>
+          <li><svg viewBox="0 0 28 28"><rect x="2" y="12" width="24" height="6" fill="#bbb"/><rect x="8" y="2" width="12" height="24" fill="#a89f93"/><rect x="8" y="12" width="12" height="6" fill="#ddd"/></svg><div><b>Driveway, lowered curb, dirt track (§10)</b>Leaving one, you give way to everyone on the road.</div></li>
+          <li><svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-dasharray="10 4"/></svg><div><b>Deadlock</b>Cars on all four sides with no signs: nobody has priority. Drivers agree by hand signal and one waives.</div></li>
+        </ol>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/*ENGINE START*/
+const ARM_NAME=['north','east','south','west'];
+const U=[[0,-1],[1,0],[0,1],[-1,0]];
+const W=34,L=17,CR=22,BOX=36,STOPD=44,SPAWN=112,CLEARD=258;
+const turnType=(a,e)=>{const d=(e-a+4)%4;return d===2?'straight':d===1?'left':d===3?'right':'uturn'};
+const rightOf=d=>[-d[1],d[0]];
+function laneIn(a,dist){const din=[-U[a][0],-U[a][1]],r=rightOf(din);return [U[a][0]*dist+r[0]*L,U[a][1]*dist+r[1]*L]}
+function laneOut(e,dist){const r=rightOf(U[e]);return [U[e][0]*dist+r[0]*L,U[e][1]*dist+r[1]*L]}
+function bez(p0,p1,p2,p3,t){const m=1-t,a=m*m*m,b=3*m*m*t,c=3*m*t*t,d=t*t*t;return [a*p0[0]+b*p1[0]+c*p2[0]+d*p3[0],a*p0[1]+b*p1[1]+c*p2[1]+d*p3[1]]}
+const pathCache={};
+function routePath(a,e){
+  const key=a+'-'+e; if(pathCache[key]) return pathCache[key];
+  const t=turnType(a,e), s=t==='right'?54:BOX, k=t==='right'?20:t==='left'?30:18;
+  const din=[-U[a][0],-U[a][1]], dout=U[e];
+  const p0=laneIn(a,s), p3=laneOut(e,s);
+  const p1=[p0[0]+din[0]*k,p0[1]+din[1]*k], p2=[p3[0]-dout[0]*k,p3[1]-dout[1]*k];
+  const pts=[];
+  for(let d=SPAWN; d>s; d-=4) pts.push(laneIn(a,d));
+  for(let i=0;i<=28;i++) pts.push(bez(p0,p1,p2,p3,i/28));
+  for(let d=s+4; d<=CLEARD; d+=4) pts.push(laneOut(e,d));
+  return pathCache[key]=pts;
+}
+function corePath(a,e){return routePath(a,e).filter(p=>Math.abs(p[0])<=64&&Math.abs(p[1])<=64)}
+function conflict(X,Y){
+  if(X.arm===Y.arm) return false;
+  const tx=turnType(X.arm,X.exit), ty=turnType(Y.arm,Y.exit);
+  if(tx==='left'&&ty==='left'&&(X.arm+2)%4===Y.arm) return false; // opposing left turners turn at the same time (§9 Abs. 4)
+  const A=corePath(X.arm,X.exit), B=corePath(Y.arm,Y.exit);
+  for(const p of A) for(const q of B){const dx=p[0]-q[0],dy=p[1]-q[1]; if(dx*dx+dy*dy<15*15) return true}
+  return false;
+}
+const isControlled=ctx=>ctx.control==='lights'||ctx.control==='officer';
+function mainArms(ctx){const m=[0,1,2,3].filter(a=>ctx.sign[a]==='prio'||ctx.sign[a]==='prio301');return m.length===2?m:null}
+function isBent(ctx){const m=mainArms(ctx);return !!m && (m[0]+2)%4!==m[1]}
+function vturn(c,ctx){
+  const [p1,p2]=mainArms(ctx); const other=c.arm===p1?p2:p1;
+  if(c.exit===other) return 'straight';
+  const tm=turnType(c.arm,other);
+  if(tm==='straight') return turnType(c.arm,c.exit);
+  return tm==='left'?'right':'left';
+}
+function rank(c,ctx,lightOf){
+  if(c.emergency) return 9;
+  if(isControlled(ctx)){
+    const l=lightOf(c.arm);
+    if(l==='green') return 3;
+    if(l==='red'&&ctx.control==='lights'&&ctx.arrow[c.arm]&&turnType(c.arm,c.exit)==='right') return 2;
+    return 1;
+  }
+  if(ctx.kind[c.arm]==='driveway') return 0;
+  const s=ctx.sign[c.arm]; if(s==='prio'||s==='prio301') return 2;
+  return 1;
+}
+// returns reason code if X must let Y go first (assuming their paths conflict), else null
+function yields(X,Y,ctx,lightOf){
+  const rx=rank(X,ctx,lightOf), ry=rank(Y,ctx,lightOf);
+  if(rx>ry) return null;
+  if(rx<ry){
+    if(Y.emergency) return 'emergency';
+    if(isControlled(ctx)) return rx===2?'arrow':'red';
+    if(ctx.kind[X.arm]==='driveway') return 'driveway';
+    return 'sign';
+  }
+  if(X.emergency) return null;
+  const tX=turnType(X.arm,X.exit), tY=turnType(Y.arm,Y.exit);
+  if(!isControlled(ctx)&&rx===2&&mainArms(ctx)){
+    const vX=vturn(X,ctx), vY=vturn(Y,ctx);
+    if(vX==='left'&&vY!=='left') return isBent(ctx)?'bent':'left';
+    return null;
+  }
+  if(Y.arm===(X.arm+3)%4) return isControlled(ctx)?null:'right';
+  if(Y.arm===(X.arm+1)%4) return null;
+  if(Y.arm===(X.arm+2)%4){ if(tX==='left'&&tY!=='left') return 'left'; return null }
+  return null;
+}
+function phaseArms(p){return p===0?[0,2]:[1,3]}
+function staticLight(phase){return a=>phaseArms(phase).includes(a)?'green':'red'}
+function canMove(c,ctx,lightOf){
+  if(c.emergency||!isControlled(ctx)) return true;
+  const l=lightOf(c.arm);
+  if(l==='green') return true;
+  return ctx.control==='lights'&&l==='red'&&ctx.arrow[c.arm]&&turnType(c.arm,c.exit)==='right';
+}
+function solve(cars,ctx,phase0){
+  let pending=cars.slice(), phase=phase0||0, switches=0; const steps=[];
+  while(pending.length){
+    const lo=staticLight(phase);
+    const movable=pending.filter(c=>canMove(c,ctx,lo));
+    const free=movable.filter(X=>!pending.some(Y=>Y!==X&&conflict(X,Y)&&yields(X,Y,ctx,lo)));
+    if(free.length){steps.push({cars:free}); pending=pending.filter(c=>!free.includes(c)); switches=0; continue}
+    if(isControlled(ctx)&&switches<2){phase=1-phase; steps.push({lights:true}); switches++; continue}
+    steps.push({deadlock:movable.length?movable:pending}); break;
+  }
+  while(steps.length&&steps[steps.length-1].lights) steps.pop();
+  return steps;
+}
+/*ENGINE END*/
+
+/* ---------- scenario data ---------- */
+const AI={N:0,E:1,S:2,W:3};
+const COLORS=['#d23c3c','#2d6bd1','#e0a21b','#2a9a63'];
+const SC=[
+ {cat:'Rechts vor links',title:'The car on the right goes first',brief:'No signs, no lights. A and B arrive together.',cars:['S>N','E>W'],
+  lesson:'At a junction without signs or lights, whoever comes from your right goes first (§8 Abs. 1 StVO). B is on A’s right.'},
+ {cat:'Rechts vor links',title:'This time you are on the right',brief:'Same junction. Who has priority now?',cars:['S>N','W>E'],
+  lesson:'A has nobody on its right, so A goes. If you have priority, take it decisively; hesitating confuses everyone else.'},
+ {cat:'Rechts vor links',title:'Turning left across oncoming traffic',brief:'A wants to turn left, B comes straight towards it.',cars:['S>W','N>S'],
+  lesson:'Rechts vor links settles crossing traffic. Oncoming traffic is a different rule: if you turn left, oncoming traffic goes first (§9 Abs. 3 StVO).'},
+ {cat:'Rechts vor links',title:'A chain of three',brief:'Three cars, all straight on. Work out the chain.',cars:['S>N','E>W','N>S'],
+  lesson:'C has no one on its right, so C goes. B waits for C (on B’s right). A waits for B (on A’s right). A and C do not cross each other.'},
+ {cat:'Rechts vor links',title:'Right turn, left turn, straight',brief:'All three cars want to end up on the east road.',cars:['S>E','N>E','W>E'],
+  lesson:'A has nobody on its right and is not turning left, so it goes first. C waits for A (A is on C’s right). B turns left, so it waits for oncoming A, and for C on its right.'},
+ {cat:'Rechts vor links',title:'The T-junction trap',brief:'A T-junction without any signs. The through road has NO priority here.',arms:'ESW',cars:['S>W','W>E','E>W'],
+  lesson:'Rechts vor links also applies at T-junctions. The road that "looks bigger" means nothing. C is on A’s right, and A is on B’s right. Order: C, then A, then B.'},
+ {cat:'Rechts vor links',title:'Two left turners',brief:'Both cars turn left from opposite sides.',cars:['S>W','N>E'],
+  lesson:'Opposing left turners turn at the same time, passing in front of each other (§9 Abs. 4 StVO). Neither has to wait for the other, so any order is right.'},
+ {cat:'Rechts vor links',title:'Four-way standoff',brief:'A car on every side, no signs. Everyone has someone on their right.',cars:['S>N','E>W','N>S','W>E'],
+  lesson:'Each car must wait for the one on its right, so nobody has priority. Drivers agree by hand signal; one waives, then rechts vor links applies to the rest.'},
+ {cat:'Signs',title:'Yield sign',brief:'A faces a "Vorfahrt gewähren" sign and shark teeth. B is on the priority road.',signs:{N:'yield',S:'yield',E:'prio',W:'prio'},teeth:{S:true},cars:['S>N','W>E'],
+  lesson:'Signs beat rechts vor links. B is on A’s left, but B is on the priority road (306) and A has a yield sign (205).'},
+ {cat:'Signs',title:'STOP means stop',brief:'A has a stop sign and wants to turn right.',signs:{N:'stop',S:'stop',E:'prio',W:'prio'},cars:['S>E','W>E'],
+  lesson:'At a stop sign (206) you must come to a complete standstill at the stop line, even if the road is clear, and then give way like at a yield sign.'},
+ {cat:'Signs',title:'Turning off the priority road',brief:'A is on the priority road and turns left. B is oncoming, C waits on the side road.',signs:{N:'yield',S:'yield',E:'prio',W:'prio'},cars:['W>N','E>W','S>N'],
+  lesson:'Being on the priority road does not let you turn left in front of oncoming traffic. B goes, then A, then C, who has to give way to both.'},
+ {cat:'Signs',title:'Priority at the next junction',brief:'Sign 301 gives the E–W road priority at this junction only.',arms:'ESW',signs:{E:'prio301',W:'prio301',S:'yield'},cars:['S>W','E>S','W>E'],
+  lesson:'Sign 301 grants priority only at the next junction. Among the main-road cars, left-turning B waits for oncoming C. A on the side road waits for both.'},
+ {cat:'Bent priority road',title:'The priority road bends',brief:'The main road runs from south to west. The plate under the sign shows its course.',signs:{S:'prio',W:'prio',N:'yield',E:'yield'},teeth:{N:true},cars:['S>W','W>E','N>S'],
+  lesson:'Following the bend counts as going straight. B leaves the main road across A’s path, so B turns "left" in main-road terms and waits. C on the side road waits for both.'},
+ {cat:'Bent priority road',title:'Side roads among themselves',brief:'Two cars on side roads and one on the bending main road.',signs:{S:'prio',W:'prio',N:'yield',E:'yield'},cars:['S>W','N>S','E>W'],
+  lesson:'A on the main road goes first. Between the two side roads, rechts vor links applies: B is on C’s right, so B goes before C.'},
+ {cat:'Bent priority road',title:'Straight on is not always first',brief:'The main road bends from south to east. A wants to go straight.',signs:{S:'prio',E:'prio',N:'yield',W:'yield'},cars:['S>N','E>S','W>E'],
+  lesson:'B follows the main road, which counts as straight. A going "straight" geometrically actually leaves the main road across B’s path, so A waits. C has a yield sign and goes last.'},
+ {cat:'Lights & police',title:'Lights beat signs',brief:'The lights are working. North–south is green, even though the signs favour east–west.',signs:{E:'prio',W:'prio',N:'yield',S:'yield'},control:'lights',phase0:0,cars:['S>W','N>S','E>W','W>N'],
+  lesson:'Working traffic lights override signs (§37 StVO). On green, left turner A still waits for oncoming B. When east–west turns green, left-turning D waits for oncoming C.'},
+ {cat:'Lights & police',title:'Green arrow',brief:'A has red, but the green-arrow plate (Grünpfeil) allows a right turn.',control:'lights',phase0:1,arrow:{S:true},cars:['S>E','W>E','E>W'],
+  lesson:'Green arrow (sign 720): turn right on red only after a full stop at the stop line, and only after letting green traffic through (§37 Abs. 2 StVO). B has green and goes first.'},
+ {cat:'Lights & police',title:'Lights out',brief:'The lights are off. What applies now?',signs:{N:'yield',S:'yield',E:'prio',W:'prio'},control:'lightsOff',cars:['S>N','W>E'],
+  lesson:'When lights are off or flash yellow, the signs apply. A has a yield sign, so A waits for B, even though B comes from A’s left.'},
+ {cat:'Lights & police',title:'Police officer',brief:'An officer is directing traffic. The signs say otherwise.',signs:{N:'prio',S:'prio',E:'stop',W:'stop'},control:'officer',phase0:1,cars:['W>E','N>S','E>S'],
+  lesson:'Police signals beat lights and signs (§36 StVO). Officer’s side towards you means go; chest or back means stop. Left-turning C still waits for oncoming A.'},
+ {cat:'Special cases',title:'Leaving a driveway',brief:'A is leaving a driveway across the pavement. No signs anywhere.',arms:'ESW',kind:{S:'driveway'},cars:['S>E','W>E','E>W'],
+  lesson:'Leaving a driveway, car park, lowered curb or dirt track, you give way to all road traffic (§10 StVO). Rechts vor links does not help you here.'},
+ {cat:'Special cases',title:'Blue lights and siren',brief:'A is an emergency vehicle on a call. Normally A would wait for B.',cars:['W>E!','S>N','N>S'],
+  lesson:'With blue lights and siren on, everyone must make way immediately (§38 StVO). After A has passed, B and C drive straight towards each other without crossing paths, so they may go in either order.'}
+];
+
+/* ---------- build ---------- */
+function buildDef(d){
+  const arms=[0,0,0,0]; (d.arms||'NESW').split('').forEach(ch=>arms[AI[ch]]=1);
+  const sign=[null,null,null,null], kind=['road','road','road','road'], arrow=[false,false,false,false];
+  for(const k in (d.signs||{})) sign[AI[k]]=d.signs[k];
+  for(const k in (d.kind||{})) kind[AI[k]]=d.kind[k];
+  for(const k in (d.arrow||{})) arrow[AI[k]]=!!d.arrow[k];
+  const teeth=[false,false,false,false]; for(const k in (d.teeth||{})) teeth[AI[k]]=!!d.teeth[k];
+  const ctx={arms,sign,kind,arrow,teeth,control:d.control||null};
+  const cars=d.cars.map((s,i)=>{const em=s.endsWith('!'); const [a,e]=s.replace('!','').split('>');return {arm:AI[a],exit:AI[e],emergency:em,letter:'ABCD'[i],color:em?'#f4f4f1':COLORS[i],idx:i}});
+  return {...d,ctx,carDefs:cars,phase0:d.phase0||0,drill:!!d.drill};
+}
+/* ---------- course: your car on every road, every manoeuvre ---------- */
+const LAYOUTS=[
+ {title:'Crossroads without signs',brief:'No signs, no lights: rechts vor links.',arms:'NESW'},
+ {title:'T-junction without signs',brief:'No signs at a T-junction. The through road has no priority.',arms:'ESW'},
+ {title:'Priority road, shark teeth',brief:'East–west is the priority road. The side roads have Yield signs and shark-teeth markings.',arms:'NESW',signs:{E:'prio',W:'prio',N:'yield',S:'yield'},teeth:{N:true,S:true}},
+ {title:'Priority road, stop signs',brief:'North–south has priority. East and west must stop at the solid line.',arms:'NESW',signs:{N:'prio',S:'prio',E:'stop',W:'stop'}},
+ {title:'T-junction on a priority road',brief:'The through road has priority. The stem has a Yield sign and a broken give-way line.',arms:'ESW',signs:{E:'prio',W:'prio',S:'yield'}},
+ {title:'Side road with shark teeth',brief:'North–south has priority at this junction (301). The road from the west joins with shark teeth.',arms:'NSW',signs:{N:'prio301',S:'prio301',W:'yield'},teeth:{W:true}},
+ {title:'Bent priority: south to west',brief:'The main road bends. Read the plate under the diamond.',arms:'NESW',signs:{S:'prio',W:'prio',N:'yield',E:'yield'},teeth:{E:true}},
+ {title:'Bent priority: east to south',brief:'Another bend, the other way round.',arms:'NESW',signs:{E:'prio',S:'prio',N:'yield',W:'yield'},teeth:{N:true}},
+ {title:'Bent priority at a T',brief:'The main road turns at the T, so the straight-through road is a side road.',arms:'ESW',signs:{S:'prio',W:'prio',E:'yield'},teeth:{E:true}},
+ {title:'Traffic lights, green arrows',brief:'Lights beat the signs. North and south have green-arrow plates.',arms:'NESW',control:'lights',arrow:{N:true,S:true},signs:{E:'prio',W:'prio',N:'yield',S:'yield'}},
+ {title:'Police officer directing',brief:'The officer beats lights and signs.',arms:'NESW',control:'officer',signs:{N:'prio',S:'prio',E:'yield',W:'yield'}},
+ {title:'Driveway onto a road',brief:'Leaving the driveway (south), you give way to everyone.',arms:'ESW',kind:{S:'driveway'}}
+];
+function roundsFor(lay){
+  const pres=[...lay.arms].map(ch=>AI[ch]), out=[];
+  for(const a of [2,3,0,1].filter(a=>pres.includes(a)))
+    for(const t of ['straight','right','left']){const e=pres.find(e=>e!==a&&turnType(a,e)===t); if(e!==undefined) out.push({arm:a,exit:e})}
+  return out;
+}
+const TOTAL_ROUNDS=LAYOUTS.reduce((n,l)=>n+roundsFor(l).length,0);
+function mulberry(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function makeRound(li,ri){
+  const lay=LAYOUTS[li], R=roundsFor(lay)[ri], rng=mulberry(li*1009+ri*97+3);
+  const pres=[...lay.arms].map(ch=>AI[ch]), others=pres.filter(a=>a!==R.arm);
+  const want=ri%2===0?'wait':'go'; let best=null, fallback=null;
+  for(let t=0;t<120&&!best;t++){
+    const k=1+Math.floor(rng()*Math.min(3,others.length));
+    const pick=others.slice().sort(()=>rng()-.5).slice(0,k);
+    const cars=['NESW'[R.arm]+'>'+'NESW'[R.exit]].concat(pick.map(a=>{const ex=pres.filter(e=>e!==a);return 'NESW'[a]+'>'+'NESW'[ex[Math.floor(rng()*ex.length)]]}));
+    const def=buildDef({...lay,cat:'Course',cars,phase0:Math.floor(rng()*2),drill:true});
+    if(solve(def.carDefs,def.ctx,def.phase0).some(s=>s.deadlock)) continue;
+    const P=def.carDefs[0], lo=staticLight(def.phase0), ctx=def.ctx;
+    const conf=def.carDefs.slice(1).filter(Y=>conflict(P,Y));
+    const blocked=!canMove(P,ctx,lo);
+    if(!conf.length&&!blocked) continue;
+    const st=(blocked||conf.some(Y=>yields(P,Y,ctx,lo)))?'wait':'go';
+    if(st===want) best=def; else if(!fallback) fallback=def;
+  }
+  const def=best||fallback;
+  def.title=lay.title; def.li=li; def.ri=ri;
+  def.brief=`You are car A, coming from the ${ARM_NAME[R.arm]} and ${TURN_WORD[turnType(R.arm,R.exit)]}. ${lay.brief}`;
+  return def;
+}
+const rnd=n=>Math.floor(Math.random()*n);
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
+function randomDef(){
+  for(let tries=0;tries<400;tries++){
+    const T=Math.random()<0.3, missing=T?rnd(4):-1;
+    const armsStr=[0,1,2,3].filter(a=>a!==missing).map(a=>'NESW'[a]).join('');
+    const present=[0,1,2,3].filter(a=>a!==missing);
+    const d={cat:'Practice',arms:armsStr,signs:{},kind:{},arrow:{},cars:[]};
+    const r=Math.random(); const sub=()=>Math.random()<0.65?'yield':'stop';
+    if(r<0.32){d.title='Unmarked junction';d.brief='No signs, no lights.';
+      if(T&&Math.random()<0.3){d.kind['NESW'[(missing+2)%4]]='driveway';d.title='Driveway exit';d.brief='One car leaves a driveway.'}}
+    else if(r<0.58){
+      let axis=T?(missing%2===0?1:0):rnd(2); const p=axis===0?[0,2]:[1,3];
+      const ps=Math.random()<0.75?'prio':'prio301';
+      p.forEach(a=>d.signs['NESW'[a]]=ps); present.filter(a=>!p.includes(a)).forEach(a=>d.signs['NESW'[a]]=sub());
+      d.title='Priority road';d.brief='Signs decide who goes first.';}
+    else if(r<0.8){
+      const pairs=[[0,1],[1,2],[2,3],[3,0]].filter(([a,b])=>present.includes(a)&&present.includes(b)); const p=pairs[rnd(pairs.length)];
+      p.forEach(a=>d.signs['NESW'[a]]='prio'); present.filter(a=>!p.includes(a)).forEach(a=>d.signs['NESW'[a]]=sub());
+      d.title='Bent priority road';d.brief='The main road bends. Check the plate under the sign.';}
+    else{
+      d.control=Math.random()<0.8?'lights':'officer'; d.phase0=rnd(2);
+      if(d.control==='lights'&&Math.random()<0.5){const a=present[rnd(present.length)];d.arrow['NESW'[a]]=true}
+      d.title=d.control==='lights'?'Traffic lights':'Police officer';d.brief=d.control==='lights'?'Watch the lights.':'Read the officer.';}
+    const n=2+rnd(Math.min(3,present.length-1));
+    const arms=shuffle(present.slice()).slice(0,n);
+    d.cars=arms.map(a=>{const ex=present.filter(e=>e!==a);let e=ex[rnd(ex.length)];
+      if(d.arrow['NESW'[a]]&&Math.random()<0.7){const re=(a+3)%4; if(present.includes(re)) e=re}
+      return 'NESW'[a]+'>'+'NESW'[e]});
+    if(!d.control&&Math.random()<0.08) d.cars[rnd(n)]+='!';
+    const def=buildDef(d);
+    const lo=staticLight(def.phase0);
+    let rel=0; def.carDefs.forEach(X=>def.carDefs.forEach(Y=>{if(X!==Y&&conflict(X,Y)&&yields(X,Y,def.ctx,lo))rel++}));
+    if(rel===0&&Math.random()<0.85) continue;
+    def.lesson=null; def.random=true; return def;
+  }
+}
+
+/* ---------- reason text ---------- */
+const SIGN_NAME={yield:'a Yield sign (205)',stop:'a STOP sign (206)',prio:'the priority road (306)',prio301:'priority at this junction (301)'};
+const TURN_WORD={straight:'going straight',left:'turning left',right:'turning right',uturn:'turning around'};
+function reasonText(code,X,Y,ctx){
+  const x=X.letter,y=Y.letter;
+  switch(code){
+    case 'emergency':return `${y} has blue lights and siren on. Everyone must make way (§38 StVO).`;
+    case 'red':return `${y} has green, ${x} has red.`;
+    case 'arrow':return `${x} turns right on red under the green arrow and must let ${y} (green) go first (§37 Abs. 2 StVO).`;
+    case 'driveway':return `${x} is leaving a driveway and must let all road traffic go first, including ${y} (§10 StVO).`;
+    case 'sign':return `${x} faces ${SIGN_NAME[ctx.sign[X.arm]]||'no sign'}, while ${y} is on ${SIGN_NAME[ctx.sign[Y.arm]]||'the priority road'}. ${x} gives way (§8 StVO).`;
+    case 'bent':return `On a bent priority road, following the bend counts as straight. ${x} leaves the main road across oncoming ${y}’s path and must wait (§9 Abs. 3 StVO).`;
+    case 'left':return `${x} turns left and must let oncoming ${y} go first (§9 Abs. 3 StVO).`;
+    case 'right':return `${y} comes from ${x}’s right: rechts vor links (§8 Abs. 1 StVO).`;
+  }
+  return '';
+}
+function stepsText(steps){
+  return steps.map(s=>s.lights?'signal changes':s.deadlock?`deadlock (${s.deadlock.map(c=>c.letter).join(', ')}: agree who goes)`:s.cars.map(c=>c.letter).join(' + ')).join('  →  ');
+}
+
+/* ---------- game state ---------- */
+const cv=document.getElementById('cv'); let g=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+let ZOOMS=[1,1.25,1.5,1.8], zoom=matchMedia('(hover:none)').matches?1.8:1.5; try{const z=+localStorage.getItem('rvl-zoom');if(ZOOMS.includes(z))zoom=z}catch(e){}
+let G=null, scIndex=0, mode='course', li=0, ri=0, seed=1, hint=false, keys={}, lastT=performance.now(), toastTimer=0;
+let done=new Set();
+try{done=new Set(JSON.parse(localStorage.getItem('rvl-done2')||'[]'))}catch(e){}
+const saveDone=()=>{try{localStorage.setItem('rvl-done2',JSON.stringify([...done]))}catch(e){}};
+const indFor=c=>{const t=turnType(c.arm,c.exit);return t==='left'||t==='right'?t:'none'};
+
+function makeCar(cd,drill){
+  const p=laneIn(cd.arm,SPAWN), din=[-U[cd.arm][0],-U[cd.arm][1]];
+  const ai=drill&&cd.idx>0;
+  return {...cd,x:p[0],y:p[1],h:Math.atan2(din[1],din[0]),speed:0,steer:0,entered:false,cleared:false,stopped:false,fade:1,braking:false,
+    ai,player:drill&&cd.idx===0,s:0,delay:0.6+cd.idx*0.35,ind:drill&&cd.idx===0?'none':indFor(cd)};
+}
+function load(def){
+  G={def,ctx:def.ctx,cars:def.carDefs.map(c=>makeCar(c,def.drill)),active:def.drill?0:-1,result:null,log:[],notes:[],time:0,
+     ctl:{phase:def.phase0,stage:'green',t:0},shake:0,idle:0,toldGo:false};
+  G.solution=solve(def.carDefs,def.ctx,def.phase0);
+  $('verdict').hidden=true; $('answer').hidden=true;
+  renderPanel();
+  if(fpOn) build3D();
+  try{hasTTS&&speechSynthesis.cancel()}catch(e){}
+  const myDef=def; setTimeout(()=>{ if(G&&G.def===myDef&&G.time<3) announce() },650);
+}
+function lightOf(a){
+  const c=G.ctl, grp=phaseArms(c.phase).includes(a);
+  if(c.stage==='green') return grp?'green':'red';
+  if(c.stage==='yellow') return grp?'yellow':'red';
+  if(c.stage==='redyellow') return grp?'redyellow':'red';
+  return 'red';
+}
+function updateControl(dt){
+  if(!isControlled(G.ctx)) return;
+  const c=G.ctl; c.t+=dt/60;
+  if(c.stage==='green'){
+    if(c.t<2.5) return;
+    const ga=phaseArms(c.phase);
+    const greenLeft=G.cars.some(k=>!k.cleared&&!k.exited&&!k.emergency&&ga.includes(k.arm));
+    const others=G.cars.some(k=>!k.cleared&&!k.exited&&!ga.includes(k.arm));
+    const inBox=G.cars.some(inJ);
+    if(!greenLeft&&others&&!inBox){c.stage='yellow';c.t=0}
+  }else if(c.stage==='yellow'&&c.t>1.5){c.stage='allred';c.t=0}
+  else if(c.stage==='allred'&&c.t>1){c.phase=1-c.phase;c.stage=G.ctx.control==='officer'?'green':'redyellow';c.t=0}
+  else if(c.stage==='redyellow'&&c.t>1){c.stage='green';c.t=0}
+}
+
+/* ---------- physics ---------- */
+function onRoad(x,y){
+  const ctx=G.ctx;
+  if(Math.abs(x)<=W+2&&Math.abs(y)<=W+2) return true;
+  for(let a=0;a<4;a++){ if(!ctx.arms[a]) continue;
+    const along=x*U[a][0]+y*U[a][1], lat=U[a][0]!==0?y:x;
+    if(along>=W-2&&Math.abs(lat)<=W+2) return true; }
+  for(let a=0;a<4;a++){const b=(a+1)%4; if(!filletOK(a,b)) continue;
+    const sx=U[a][0]+U[b][0], sy=U[a][1]+U[b][1], px=x*sx, py=y*sy;
+    if(px>=W&&px<=W+CR&&py>=W&&py<=W+CR){const dx=px-W-CR,dy=py-W-CR; if(dx*dx+dy*dy>=CR*CR) return true}}
+  return false;
+}
+function filletOK(a,b){const c=G.ctx;return c.arms[a]&&c.arms[b]&&c.kind[a]!=='driveway'&&c.kind[b]!=='driveway'}
+function corners(c,hl=14,hw=7){const co=Math.cos(c.h),si=Math.sin(c.h);return [[hl,hw],[hl,-hw],[-hl,-hw],[-hl,hw]].map(([u,v])=>[c.x+u*co-v*si,c.y+u*si+v*co])}
+function overlap(A,B){
+  for(const P of [A,B]) for(let i=0;i<4;i++){
+    const p=P[i],q=P[(i+1)%4], nx=q[1]-p[1], ny=p[0]-q[0];
+    let minA=1e9,maxA=-1e9,minB=1e9,maxB=-1e9;
+    for(const r of A){const d=r[0]*nx+r[1]*ny;minA=Math.min(minA,d);maxA=Math.max(maxA,d)}
+    for(const r of B){const d=r[0]*nx+r[1]*ny;minB=Math.min(minB,d);maxB=Math.max(maxB,d)}
+    if(maxA<minB||maxB<minA) return false;
+  }
+  return true;
+}
+// steering assist: pure-pursuit along the route the car is indicating
+let assist=(()=>{try{const v=localStorage.getItem('rvl-assist');if(v!==null)return v==='1'}catch(e){} return matchMedia('(hover:none)').matches})();
+function pursuit(c){
+  const pts=routePath(c.arm,c.exit);
+  let best=c.pIdx||0, bd=1e9;
+  for(let i=Math.max(0,(c.pIdx||0)-3);i<Math.min(pts.length,(c.pIdx||0)+40);i++){const d=(pts[i][0]-c.x)**2+(pts[i][1]-c.y)**2; if(d<bd){bd=d;best=i}}
+  c.pIdx=best;
+  const Ld=14+Math.abs(c.speed)*7; let j=best;
+  while(j<pts.length-1&&Math.hypot(pts[j][0]-c.x,pts[j][1]-c.y)<Ld) j++;
+  let al=Math.atan2(pts[j][1]-c.y,pts[j][0]-c.x)-c.h; al=Math.atan2(Math.sin(al),Math.cos(al));
+  return Math.atan2(2*22*Math.sin(al),Ld);
+}
+function setAssist(on){assist=on; try{localStorage.setItem('rvl-assist',on?'1':'0')}catch(e){}
+  $('assistBtn').textContent=on?'Steering assist: on (G)':'Steering assist: off (G)'; $('assistBtn').setAttribute('aria-pressed',on);
+  $('touch').classList.toggle('assisted',on)}
+function stepCar(c,dt,input){
+  const fw=input&&(keys.w||keys.arrowup), bk=input&&(keys.s||keys.arrowdown);
+  const lf=input&&(keys.a||(!fpOn&&keys.arrowleft)), rt=input&&(keys.d||(!fpOn&&keys.arrowright));
+  c.braking=false;
+  if(fw){ c.speed+= (c.speed<0?0.2:0.055)*dt }
+  else if(bk){ if(c.speed>0.05){c.speed-=0.2*dt;c.braking=true;if(c.speed<0)c.speed=0} else c.speed-=0.05*dt }
+  else { c.speed*=Math.pow(input?0.985:0.85,dt); if(Math.abs(c.speed)<0.02) c.speed=0 }
+  const grass=!onRoad(c.x,c.y);
+  const vmax=grass?0.7:2.2;
+  if(c.speed>vmax) c.speed=Math.max(vmax,c.speed-0.25*dt);
+  if(c.speed<-0.9) c.speed=-0.9;
+  const maxSteer=0.6-0.16*Math.min(1,Math.abs(c.speed)/2.2);
+  let target=((rt?1:0)-(lf?1:0))*maxSteer, rate;
+  if(input&&assist&&!lf&&!rt&&c.speed>0.02){ target=Math.max(-0.62,Math.min(0.62,pursuit(c))); rate=0.08*dt }
+  else rate=(Math.abs(target)>Math.abs(c.steer)&&Math.sign(target)===Math.sign(c.steer)||c.steer===0?0.045:0.09)*dt; // gentle turn-in, quicker return to centre
+  c.steer+=Math.max(-rate,Math.min(rate,target-c.steer));
+  c.h+=(c.speed/22)*Math.tan(c.steer)*dt;
+  c.x+=Math.cos(c.h)*c.speed*dt; c.y+=Math.sin(c.h)*c.speed*dt;
+  c.x=Math.max(-316,Math.min(316,c.x)); c.y=Math.max(-316,Math.min(316,c.y));
+}
+function front(c){return [c.x+Math.cos(c.h)*15,c.y+Math.sin(c.h)*15]}
+
+/* AI cars follow their indicated route and obey the same rules the player is judged by */
+const pdCache={};
+function pathData(a,e){
+  const k=a+'-'+e; if(pdCache[k]) return pdCache[k];
+  const pts=routePath(a,e), cum=[0];
+  for(let i=1;i<pts.length;i++) cum.push(cum[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
+  return pdCache[k]={pts,cum,len:cum[cum.length-1],hold:SPAWN-(STOPD+17)};
+}
+function placeOnPath(c,P){
+  let i=1; while(i<P.cum.length-1&&P.cum[i]<c.s) i++;
+  const a=P.pts[i-1], b=P.pts[i], t=Math.min(1,Math.max(0,(c.s-P.cum[i-1])/((P.cum[i]-P.cum[i-1])||1)));
+  c.x=a[0]+(b[0]-a[0])*t; c.y=a[1]+(b[1]-a[1])*t;
+  const j=Math.min(P.pts.length-1,i+1), q=P.pts[j], p0=P.pts[Math.max(0,i-2)];
+  c.h=Math.atan2(q[1]-p0[1],q[0]-p0[0]);
+}
+function aiNeedsStop(c){return needsStop(c)}
+function aiMayGo(c){
+  const ctx=G.ctx;
+  if(c.delay>0) return false;
+  if(!canMove(c,ctx,lightOf)) return false;
+  if(aiNeedsStop(c)&&!c.stopped) return false;
+  if(G.cars.some(Y=>Y!==c&&!Y.entered&&!Y.cleared&&conflict(c,Y)&&yields(c,Y,ctx,lightOf))) return false;
+  if(G.cars.some(Y=>Y!==c&&inJ(Y)&&conflict(c,Y))) return false;
+  return true;
+}
+function stepAI(c,dt){
+  const P=pathData(c.arm,c.exit);
+  c.delay-=dt/60;
+  const go=c.entered||aiMayGo(c);
+  let target=0.95;
+  if(!go){const dist=P.hold-c.s; target=dist<=0.6?0:Math.min(0.95,Math.sqrt(2*0.035*Math.max(0,dist)))}
+  c.braking=c.speed>target+0.05;
+  c.speed=c.speed<target?Math.min(target,c.speed+0.022*dt):Math.max(target,c.speed-0.09*dt);
+  c.s+=c.speed*dt; if(!go&&c.s>P.hold&&c.s-c.speed*dt<=P.hold) c.s=P.hold;
+  placeOnPath(c,P);
+  if(!c.entered&&c.speed<0.05&&Math.abs(c.s-P.hold)<5) c.stopped=true;
+  const f=front(c);
+  if(!c.entered&&Math.abs(f[0])<=BOX&&Math.abs(f[1])<=BOX){c.entered=true;G.log.push(c.letter)}
+  if(c.entered&&!c.exited&&outOfBox(c)) c.exited=true;
+  if(c.s>=P.len-1){c.cleared=true}
+}
+// a car has cleared the junction once its whole body is outside the junction square
+const inJ=c=>c.entered&&!c.exited&&!c.cleared;
+function outOfBox(c){
+  const co=Math.cos(c.h), si=Math.sin(c.h), m=p=>Math.max(Math.abs(p[0]),Math.abs(p[1]));
+  return m([c.x+co*15,c.y+si*15])>BOX+1&&m([c.x-co*15,c.y-si*15])>BOX+1&&m([c.x,c.y])>BOX+1;
+}
+function driveOut(c,dt){ // puzzle mode: a car that has left the junction drives itself away down its exit road
+  const e=c.exit, ta=Math.atan2(U[e][1],U[e][0]), lane=laneOut(e,0);
+  const lat=U[e][0]!==0?(c.y-lane[1]):(c.x-lane[0]); // offset from lane centre
+  let want=ta; if(U[e][0]!==0) want+=Math.max(-.4,Math.min(.4,-lat*0.04*Math.sign(U[e][0]))); else want+=Math.max(-.4,Math.min(.4,lat*0.04*Math.sign(U[e][1])));
+  let d=want-c.h; d=Math.atan2(Math.sin(d),Math.cos(d)); c.h+=Math.max(-.06,Math.min(.06,d))*dt;
+  c.speed=Math.min(1.6,c.speed+0.04*dt); c.braking=false;
+  c.x+=Math.cos(c.h)*c.speed*dt; c.y+=Math.sin(c.h)*c.speed*dt;
+  if(Math.max(Math.abs(c.x),Math.abs(c.y))>CLEARD) c.cleared=true;
+}
+
+function update(dt){
+  G.time+=dt/60;
+  if(G.result) return;
+  updateControl(dt);
+  G.cars.forEach((c,i)=>{ if(c.cleared){c.fade=Math.max(0,c.fade-0.05*dt);return}
+    if(c.ai) stepAI(c,dt); else if(c.autoOut&&i!==G.active) driveOut(c,dt); else stepCar(c,dt,i===G.active) });
+  if(!G.def.drill&&G.active<0&&G.cars.every(k=>k.exited||k.cleared)) { succeed(); return }
+  const c=G.cars[G.active]; if(!c||c.cleared) return;
+  const f=front(c);
+  if(!c.entered){
+    const along=f[0]*U[c.arm][0]+f[1]*U[c.arm][1];
+    if(Math.abs(c.speed)<0.04&&along>=BOX-2&&along<=STOPD+30) { if(!c.stopped&&needsStop(c)) toast(`${c.letter} stopped at the line ✓`); c.stopped=true }
+    if(Math.abs(f[0])<=BOX&&Math.abs(f[1])<=BOX&&along<BOX+4){ c.entered=true; G.log.push(c.letter); checkEntry(c); if(G.result) return }
+    if(G.def.drill){ // nudge a hesitant driver who actually has priority
+      if(Math.abs(c.speed)<0.04&&along<STOPD+40){G.idle+=dt/60}else G.idle=0;
+      const free=canMove(c,G.ctx,lightOf)&&!G.cars.some(Y=>Y!==c&&!Y.entered&&!Y.cleared&&conflict(c,Y)&&yields(c,Y,G.ctx,lightOf))&&!G.cars.some(Y=>Y!==c&&inJ(Y)&&conflict(c,Y));
+      if(free&&G.idle>4&&!G.toldGo){G.toldGo=true;toast('The others are waiting for you. Go!');say('Fahren Sie.')}
+    }
+  }
+  const mine=corners(c);
+  for(const o of G.cars){ if(o===c||o.cleared) continue;
+    if(overlap(mine,corners(o))){ c.speed=0; fail([`${c.letter} crashed into ${o.letter}.`],'Collision'); return } }
+  if(c.entered&&!c.exited&&outOfBox(c)){
+    let best=0,bd=-1e9; for(let a=0;a<4;a++){const d=c.x*U[a][0]+c.y*U[a][1]; if(d>bd){bd=d;best=a}}
+    c.exited=true; if(!G.def.drill){ G.active=-1; c.autoOut=true }
+    if(best!==c.exit){ fail([`${c.letter} was indicating ${TURN_WORD[turnType(c.arm,c.exit)]} (towards the ${ARM_NAME[c.exit]}) but left towards the ${ARM_NAME[best]}. Other drivers decide based on your indicator, so drive the route you signal.`],'Wrong route'); return }
+    if(G.def.drill||G.cars.every(k=>k.exited||k.cleared)) succeed(); else { renderPanel(); toast('Junction clear. Who goes next? Press 1–4 or tap a car') }
+  }
+}
+function needsStop(c){const ctl=isControlled(G.ctx);return (!ctl&&G.ctx.sign[c.arm]==='stop'&&!c.emergency)||(ctl&&G.ctx.control==='lights'&&G.ctx.arrow[c.arm]&&lightOf(c.arm)==='red'&&turnType(c.arm,c.exit)==='right')}
+
+function checkEntry(X){
+  const ctx=G.ctx, ctl=isControlled(ctx);
+  if(X.player){
+    const need=indFor(X);
+    if(X.ind!==need) return fail([need==='none'
+      ?`You are going straight but your ${X.ind} indicator was on. Others read it as a turn and decide their priority on that.`
+      :`You turned ${need} ${X.ind==='none'?'without indicating':'with the '+X.ind+' indicator on'}. Indicate early so others know your intention (§9 Abs. 1 StVO). Press ${need==='left'?'Q':'E'} before the junction.`],'Wrong indicator');
+  }
+  if(!X.emergency&&ctl){
+    const l=lightOf(X.arm);
+    if(ctx.control==='officer'&&l!=='green') return fail([`The officer’s chest or back was facing ${X.letter}. That means stop, whatever the lights or signs say (§36 StVO).`],'Ignored the officer');
+    if(l==='yellow') return fail([`${X.letter} entered on yellow. Yellow means stop if you can do so safely, and you were standing right at the line (§37 StVO).`],'Ran the yellow');
+    if(l==='redyellow') return fail([`Red and yellow together means "get ready", not "go". Wait for green.`],'Too early');
+    if(l==='red'){
+      if(ctx.control==='lights'&&ctx.arrow[X.arm]&&turnType(X.arm,X.exit)==='right'){
+        if(!X.stopped) return fail([`Green arrow (Grünpfeil): ${X.letter} must come to a full stop at the stop line before turning right on red (§37 Abs. 2 StVO).`],'No full stop');
+      } else return fail([`${X.letter} entered on red.`],'Ran a red light');
+    }
+  }
+  if(!ctl&&!X.emergency&&ctx.sign[X.arm]==='stop'&&!X.stopped)
+    return fail([`${X.letter} has a STOP sign (206). You must come to a complete standstill at the stop line before entering, even when the road is clear.`],'No full stop');
+  const crossing=G.cars.find(Y=>Y!==X&&inJ(Y)&&conflict(X,Y));
+  if(crossing) return fail([`${X.letter} drove in while ${crossing.letter} was still crossing its path. Wait until the junction is clear.`],'Blocked the junction');
+  const pend=G.cars.filter(c=>c!==X&&!c.entered&&!c.cleared);
+  const blockers=pend.filter(Y=>conflict(X,Y)&&yields(X,Y,ctx,lightOf));
+  if(blockers.length){
+    const movable=[X,...pend].filter(c=>canMove(c,ctx,lightOf));
+    const all=movable.length>1&&movable.every(c=>movable.some(Y=>Y!==c&&conflict(c,Y)&&yields(c,Y,ctx,lightOf)));
+    if(all){ G.notes.push(`Deadlock: ${movable.map(c=>c.letter).join(', ')} all had to wait for someone. Drivers agree by hand signal, so ${X.letter} going first was fine.`); return }
+    const Y=blockers[0];
+    return fail([`${X.letter} went before ${Y.letter}. ${reasonText(yields(X,Y,ctx,lightOf),X,Y,ctx)}`],'Priority violated');
+  }
+}
+
+/* ---------- verdicts ---------- */
+function relationsList(){
+  const lo=staticLight(G.def.phase0), out=[];
+  const cars=G.def.carDefs;
+  for(const X of cars) for(const Y of cars){ if(X===Y||!conflict(X,Y)) continue;
+    const r=yields(X,Y,G.ctx,lo);
+    if(r&&!(isControlled(G.ctx)&&r==='red')) out.push(reasonText(r,X,Y,G.ctx)); }
+  if(isControlled(G.ctx)) out.unshift(G.ctx.control==='officer'?'Officer’s signals first; after he turns, the other road may go.':'Lights first: cars on red wait for green.');
+  return out;
+}
+function playerSummary(){
+  const ctx=G.ctx, lo=staticLight(G.def.phase0), P=G.def.carDefs[0], out=[];
+  const ind=indFor(P);
+  out.push(ind==='none'?'You go straight: no indicator.':`You turn ${ind}: ${ind} indicator on (${ind==='left'?'Q':'E'}).`);
+  if(isControlled(ctx)&&!canMove(P,ctx,lo)) out.push(ctx.control==='officer'?'The officer was stopping your direction at first, so you waited for his signal.':'You started on red, so you waited for green.');
+  for(const Y of G.def.carDefs.slice(1)){
+    const yi=indFor(Y), what=`${Y.letter} (${yi==='none'?'no indicator, straight':yi+' indicator'})`;
+    if(!conflict(P,Y)){out.push(`${what}: your paths don’t cross, so no priority question.`);continue}
+    const r1=yields(P,Y,ctx,lo), r2=yields(Y,P,ctx,lo);
+    if(r1&&!(isControlled(ctx)&&r1==='red')) out.push(`${what}: you wait. ${reasonText(r1,P,Y,ctx)}`);
+    else if(r2&&!(isControlled(ctx)&&r2==='red')) out.push(`${what}: you go first. ${reasonText(r2,Y,P,ctx)}`);
+    else if(isControlled(ctx)) out.push(`${what}: the lights/officer separate you.`);
+  }
+  return out;
+}
+function verdictHTML(ok,head,lines){
+  const sol=stepsText(G.solution);
+  const yours=G.log.join('  →  ')||'nobody yet';
+  const drill=G.def.drill;
+  const rel=drill?playerSummary():relationsList();
+  const lesson=G.def.lesson||'';
+  const nextLbl=drill?'Next round (N) →':'Next situation (N) →';
+  return `<div class="stamp">${ok?'Richtig':'Falsch'} <small>${ok?'Correct':head}</small></div>
+   ${lines.map(l=>`<p class="why">${l}</p>`).join('')}
+   <dl class="orders"><dt>${drill?'Order into the junction':'You drove'}</dt><dd>${yours}</dd><dt>${ok?'A model order':'Correct order'}</dt><dd>${sol}</dd></dl>
+   ${lesson?`<p>${lesson}</p>`:''}
+   ${rel.length?`<ul>${[...new Set(rel)].map(r=>`<li>${r}</li>`).join('')}</ul>`:''}
+   <div class="row"><button type="button" onclick="restart()">Try again (R)</button><button type="button" class="primary" onclick="nextSc()">${nextLbl}</button></div>`;
+}
+function fail(lines,head){
+  G.result='fail'; G.shake=1;
+  const v=$('verdict'); v.className='verdict bad'; v.innerHTML=verdictHTML(false,head,lines); v.hidden=false; renderPanel();
+  say('Falsch. '+(FAIL_DE[head]||''));
+}
+function succeed(){
+  G.result='ok';
+  if(G.def.drill) done.add(`c:${G.def.li}:${G.def.ri}`); else if(!G.def.random) done.add(`p:${scIndex}`);
+  saveDone();
+  const lines=G.notes.length?G.notes:[G.def.drill?'You read the situation right and drove at the right moment.':'Every car went in a legal order.'];
+  const v=$('verdict'); v.className='verdict'; v.innerHTML=verdictHTML(true,'',lines); v.hidden=false; renderPanel();
+  say('Richtig.');
+}
+
+/* ---------- drawing ---------- */
+let scale=1;
+let CX=320,CY=320,HW=320,HH=320,touchOverlay=false;
+let hudS=1;
+function resize(){const r=cv.getBoundingClientRect(), dpr=Math.min(2,window.devicePixelRatio||1);cv.width=Math.max(1,Math.round(r.width*dpr));cv.height=Math.max(1,Math.round(r.height*dpr));scale=Math.min(cv.width,cv.height)/640;CX=cv.width/2;CY=cv.height/2;
+  hudS=dpr*Math.max(0.85,Math.min(1.1,Math.min(r.width,r.height)/600)); HW=CX/hudS; HH=CY/hudS;
+  const t=$('touch'); touchOverlay=!!t&&getComputedStyle(t).position==='absolute'&&getComputedStyle(t).display!=='none'}
+window.addEventListener('resize',resize);
+let decor=[];
+function makeDecor(){
+  decor=[]; let s=(seed*7919+13)%2147483647||7; const R=()=>{s=(s*16807)%2147483647;return s/2147483647};
+  for(let q=0;q<4;q++){const sx=q%2?1:-1, sy=q<2?-1:1;
+    decor.push({t:'house',x:sx*(W+CR+70+R()*40),y:sy*(W+CR+70+R()*40),w:60+R()*30,h:46+R()*24,c:['#b5654a','#7b7f87','#9a5a3d','#8a6f5a'][Math.floor(R()*4)]});
+    for(let i=0;i<4;i++) decor.push({t:'tree',x:sx*(W+30+R()*230),y:sy*(W+30+R()*230),r:9+R()*9});
+  }
+  decor=decor.filter(d=>d.t==='house'||(Math.abs(d.x)>W+26&&Math.abs(d.y)>W+26));
+}
+function rr(x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
+function armRect(a,half,from,to){ // rectangle along arm a
+  if(a===0) g.rect(-half,-to,half*2,to-from); if(a===2) g.rect(-half,from,half*2,to-from);
+  if(a===1) g.rect(from,-half,to-from,half*2); if(a===3) g.rect(-to,-half,to-from,half*2);
+}
+function drawGround(){
+  const ctx=G.ctx;
+  g.fillStyle='#9dbb7f'; g.fillRect(-1200,-1200,2400,2400);
+  // missing-arm area houses/trees
+  for(const d of decor){
+    if(d.t==='house'){g.fillStyle='rgba(0,0,0,.18)';g.fillRect(d.x-d.w/2+4,d.y-d.h/2+4,d.w,d.h);g.fillStyle=d.c;g.fillRect(d.x-d.w/2,d.y-d.h/2,d.w,d.h);g.strokeStyle='rgba(0,0,0,.28)';g.lineWidth=1.5;g.beginPath();g.moveTo(d.x-d.w/2,d.y);g.lineTo(d.x+d.w/2,d.y);g.stroke();}
+  }
+  if(G.ctx.arms.some(a=>!a)){const m=ctx.arms.indexOf(0);
+    const ux=U[m][0],uy=U[m][1]; g.fillStyle='rgba(0,0,0,.18)'; g.fillStyle='#b8644b';
+    g.fillRect(ux*150-40+(uy?0:0),uy*150-28,80,56); g.strokeStyle='rgba(0,0,0,.3)';g.beginPath();g.moveTo(ux*150-40,uy*150);g.lineTo(ux*150+40,uy*150);g.stroke();}
+  // sidewalk pass
+  const SW=10;
+  g.fillStyle='#d4d4cc'; g.beginPath(); g.rect(-W-SW,-W-SW,2*(W+SW),2*(W+SW));
+  for(let a=0;a<4;a++) if(ctx.arms[a]) armRect(a,W+SW,W,1200); g.fill();
+  for(let a=0;a<4;a++){const b=(a+1)%4; if(!filletOK(a,b)) continue; const sx=U[a][0]+U[b][0], sy=U[a][1]+U[b][1];
+    g.save(); g.beginPath(); g.rect(sx>0?W+SW:-(W+SW+CR),sy>0?W+SW:-(W+SW+CR),CR,CR); g.clip();
+    g.fillStyle='#d4d4cc'; g.fillRect(-400,-400,800,800); g.fillStyle='#9dbb7f'; g.beginPath(); g.arc(sx*(W+SW+CR),sy*(W+SW+CR),CR,0,7); g.fill(); g.restore();}
+  // asphalt
+  g.fillStyle='#5a5f65'; g.beginPath(); g.rect(-W,-W,2*W,2*W);
+  for(let a=0;a<4;a++) if(ctx.arms[a]&&ctx.kind[a]!=='driveway') armRect(a,W,W-1,1200); g.fill();
+  for(let a=0;a<4;a++) if(ctx.arms[a]&&ctx.kind[a]==='driveway'){
+    g.fillStyle='#a89f93'; g.beginPath(); armRect(a,W,W+SW,1200); g.fill();
+    g.strokeStyle='rgba(0,0,0,.12)'; g.lineWidth=1; for(let d=W+SW;d<1200;d+=8){g.beginPath(); if(a%2===0){const y=U[a][1]*d;g.moveTo(-W,y);g.lineTo(W,y)}else{const x=U[a][0]*d;g.moveTo(x,-W);g.lineTo(x,W)} g.stroke()}
+    g.fillStyle='#e1e1da'; g.beginPath(); armRect(a,W,W,W+SW); g.fill(); // pavement continues across: lowered curb
+  }
+  for(let a=0;a<4;a++){const b=(a+1)%4; if(!filletOK(a,b)) continue; const sx=U[a][0]+U[b][0], sy=U[a][1]+U[b][1];
+    g.save(); g.beginPath(); g.rect(sx>0?W:-(W+CR),sy>0?W:-(W+CR),CR,CR); g.clip();
+    g.fillStyle='#5a5f65'; g.fillRect(-400,-400,800,800); g.fillStyle='#d4d4cc'; g.beginPath(); g.arc(sx*(W+CR),sy*(W+CR),CR,0,7); g.fill(); g.restore();}
+  for(const d of decor) if(d.t==='tree'&&!onRoad(d.x,d.y)&&Math.abs(d.x)>W+SW+d.r&&Math.abs(d.y)>W+SW+d.r){
+    g.fillStyle='rgba(0,0,0,.18)';g.beginPath();g.arc(d.x+3,d.y+3,d.r,0,7);g.fill();
+    g.fillStyle='#5f8c4b';g.beginPath();g.arc(d.x,d.y,d.r,0,7);g.fill();g.fillStyle='#6f9d58';g.beginPath();g.arc(d.x-d.r*.3,d.y-d.r*.3,d.r*.55,0,7);g.fill();}
+  // markings
+  g.strokeStyle='#f1f1ec'; g.lineWidth=2; g.setLineDash([12,10]);
+  for(let a=0;a<4;a++){ if(!ctx.arms[a]||ctx.kind[a]==='driveway') continue; g.beginPath(); g.moveTo(U[a][0]*(STOPD+6),U[a][1]*(STOPD+6)); g.lineTo(U[a][0]*1200,U[a][1]*1200); g.stroke() }
+  g.setLineDash([]);
+  for(let a=0;a<4;a++){ if(!ctx.arms[a]) continue;
+    const s=ctx.sign[a], ctl=isControlled(ctx)||ctx.control==='lightsOff';
+    let type= (ctx.control==='lights'||ctx.control==='lightsOff')?'solid': s==='stop'?'solid': s==='yield'?'dashed':null;
+    if(!type) continue;
+    const din=[-U[a][0],-U[a][1]], r=rightOf(din);
+    if(type==='dashed'&&ctx.teeth[a]){ // shark teeth (Zeichen 342): tips point at the driver who must give way
+      g.fillStyle='#f1f1ec';
+      for(let i=0;i<4;i++){const l0=2+i*8,l1=l0+6.4,lm=(l0+l1)/2;
+        g.beginPath(); g.moveTo(U[a][0]*STOPD+r[0]*l0,U[a][1]*STOPD+r[1]*l0); g.lineTo(U[a][0]*STOPD+r[0]*l1,U[a][1]*STOPD+r[1]*l1);
+        g.lineTo(U[a][0]*(STOPD+10)+r[0]*lm,U[a][1]*(STOPD+10)+r[1]*lm); g.closePath(); g.fill()}
+      continue;
+    }
+    const p0=[U[a][0]*STOPD,U[a][1]*STOPD], p1=[p0[0]+r[0]*W,p0[1]+r[1]*W];
+    g.lineWidth=type==='solid'?5:4; g.setLineDash(type==='dashed'?[6,5]:[]); g.strokeStyle='#f1f1ec';
+    g.beginPath(); g.moveTo(p0[0]+r[0]*1,p0[1]+r[1]*1); g.lineTo(p1[0],p1[1]); g.stroke(); g.setLineDash([]);
+    void ctl;
+  }
+}
+function signPos(a,extra=0){const din=[-U[a][0],-U[a][1]],r=rightOf(din);return [U[a][0]*(STOPD+24+extra)+r[0]*(W+22),U[a][1]*(STOPD+24+extra)+r[1]*(W+22)]}
+function drawSign(type,x,y){
+  g.save(); g.translate(x,y); g.scale(1.35,1.35);
+  if(signShadow){g.fillStyle='rgba(0,0,0,.25)'; g.beginPath(); g.arc(2,13,2.2,0,7); g.fill();}
+  if(type==='yield'){g.beginPath();g.moveTo(-11,-9);g.lineTo(11,-9);g.lineTo(0,10);g.closePath();g.fillStyle='#fff';g.fill();g.lineJoin='round';g.lineWidth=3;g.strokeStyle='#c8102e';g.stroke()}
+  else if(type==='stop'){g.beginPath();for(let i=0;i<8;i++){const t=Math.PI/8+i*Math.PI/4;g.lineTo(Math.cos(t)*11.5,Math.sin(t)*11.5)}g.closePath();g.fillStyle='#c8102e';g.fill();g.lineWidth=1.3;g.strokeStyle='#fff';g.stroke();g.fillStyle='#fff';g.font='700 6.6px Barlow, sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('STOP',0,0.5)}
+  else if(type==='prio'){g.rotate(Math.PI/4);g.fillStyle='#fff';g.fillRect(-8,-8,16,16);g.strokeStyle='#222';g.lineWidth=.8;g.strokeRect(-8,-8,16,16);g.fillStyle='#f2b705';g.fillRect(-5,-5,10,10)}
+  else if(type==='prio301'){g.beginPath();g.moveTo(0,-11);g.lineTo(11,8);g.lineTo(-11,8);g.closePath();g.fillStyle='#fff';g.fill();g.lineJoin='round';g.lineWidth=3;g.strokeStyle='#c8102e';g.stroke();g.fillStyle='#111';g.fillRect(-1.3,-5,2.6,11);g.fillRect(-5,0,10,1.4)}
+  g.restore();
+}
+function drawPlate(x,y){ // Zusatzzeichen showing course of bent priority road
+  const ctx=G.ctx, m=mainArms(ctx);
+  g.save(); g.translate(x,y); g.scale(1.3,1.3); g.fillStyle='#fff'; g.fillRect(-11,-8,22,16); g.strokeStyle='#222'; g.lineWidth=.8; g.strokeRect(-11,-8,22,16);
+  g.strokeStyle='#111'; g.lineCap='square';
+  for(let a=0;a<4;a++){ if(!ctx.arms[a]) continue; g.lineWidth=m.includes(a)?3:1.1; g.beginPath(); g.moveTo(0,0); g.lineTo(U[a][0]*8,U[a][1]*6); g.stroke() }
+  g.restore();
+}
+function drawLight(x,y,state,arrow){
+  g.save(); g.translate(x,y); g.scale(1.2,1.2);
+  g.fillStyle='#1d1f21'; rr(-5,-14,10,28,3); g.fill();
+  const blink=(G.time*2)%1<.5;
+  const on={red:state==='red'||state==='redyellow',yel:state==='yellow'||state==='redyellow'||(state==='off'&&blink),grn:state==='green'};
+  [['#ff3b30',on.red,-8],['#ffc400',on.yel,0],['#30d158',on.grn,8]].forEach(([c,l,yy])=>{g.fillStyle=l?c:'#3a3d40';g.beginPath();g.arc(0,yy,3.4,0,7);g.fill();if(l){g.fillStyle=c+'44';g.beginPath();g.arc(0,yy,6,0,7);g.fill()}});
+  if(arrow){g.fillStyle='#111';g.fillRect(7,4,13,10);g.strokeStyle='#30d158';g.lineWidth=2;g.beginPath();g.moveTo(9.5,9);g.lineTo(16.5,9);g.moveTo(14,6.5);g.lineTo(17,9);g.lineTo(14,11.5);g.stroke()}
+  g.restore();
+}
+function drawControls(){
+  const ctx=G.ctx;
+  for(let a=0;a<4;a++){ if(!ctx.arms[a]) continue;
+    const s=ctx.sign[a];
+    if(ctx.control==='lights'||ctx.control==='lightsOff'){
+      const p=signPos(a); drawLight(p[0],p[1],ctx.control==='lightsOff'?'off':lightOf(a),ctx.arrow[a]);
+      if(s){const q=signPos(a,40); drawSign(s,q[0],q[1]); if(s==='prio'&&isBent(ctx)) drawPlate(q[0],q[1]+25)}
+    } else if(s){ const p=signPos(a); drawSign(s,p[0],p[1]); if(s==='prio'&&isBent(ctx)) drawPlate(p[0],p[1]+25) }
+  }
+}
+function drawOfficer(){
+  if(G.ctx.control!=='officer') return;
+  const c=G.ctl, go=c.stage==='green', ax=c.phase===1; // ax: arms along E-W
+  g.save(); g.fillStyle='rgba(255,255,255,.85)'; g.beginPath(); g.arc(0,0,11,0,7); g.fill();
+  g.rotate(ax?0:Math.PI/2);
+  g.strokeStyle='#1f3a6b'; g.lineCap='round'; g.lineWidth=3.2;
+  if(go){g.beginPath();g.moveTo(-15,0);g.lineTo(15,0);g.stroke()}
+  g.fillStyle='#1f3a6b'; g.beginPath(); g.ellipse(0,0,8,4.5,0,0,7); g.fill();
+  g.fillStyle='#f4f4f1'; g.beginPath(); g.arc(0,0,3.6,0,7); g.fill();
+  g.restore();
+  if(!go){g.strokeStyle='#ffc400';g.lineWidth=2;g.beginPath();g.arc(0,0,13+Math.sin(G.time*8)*1.5,0,7);g.stroke()}
+}
+function drawRoute(c,alpha){
+  const pts=routePath(c.arm,c.exit);
+  g.save(); g.globalAlpha=alpha; g.strokeStyle=c.emergency?'#2a63ff':c.color; g.lineWidth=3; g.setLineDash([7,6]); g.lineCap='round';
+  g.beginPath(); pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); g.stroke(); g.setLineDash([]);
+  const e=pts[pts.length-1], q=pts[pts.length-4], ang=Math.atan2(e[1]-q[1],e[0]-q[0]);
+  g.fillStyle=g.strokeStyle; g.translate(e[0],e[1]); g.rotate(ang); g.beginPath(); g.moveTo(6,0); g.lineTo(-6,-6); g.lineTo(-6,6); g.closePath(); g.fill();
+  g.restore();
+}
+function drawCar(c,active){
+  g.save(); g.globalAlpha=c.fade; g.translate(c.x,c.y); g.rotate(c.h);
+  if(active){g.strokeStyle='rgba(255,255,255,.9)';g.lineWidth=2.5;rr(-19,-12,38,24,8);g.stroke()}
+  g.fillStyle='rgba(0,0,0,.28)'; rr(-14,-6,30,16,4); g.fill();
+  g.fillStyle=c.color; rr(-15,-8,30,16,4); g.fill();
+  g.strokeStyle='rgba(0,0,0,.25)'; g.lineWidth=.8; g.stroke();
+  if(c.emergency){g.fillStyle='#ff7a00';g.fillRect(-15,-1.5,30,3)}
+  g.fillStyle='rgba(22,32,44,.82)'; rr(3,-6.5,5.5,13,1.6); g.fill(); rr(-12,-6,3.5,12,1.2); g.fill();
+  const blink=(G.time*2.6)%1<.5;
+  if(!c.cleared&&blink&&c.ind!=='none'){const sy=c.ind==='left'?-7.5:7.5;
+    [[13.5,sy],[-13.5,sy],[4,sy*1.25]].forEach(([x,y],i)=>{g.fillStyle='rgba(255,176,0,.35)';g.beginPath();g.arc(x,y,i<2?7:4,0,7);g.fill();g.fillStyle='#ffb000';g.beginPath();g.arc(x,y,i<2?3:1.8,0,7);g.fill()})}
+  if(c.braking||(active&&c.speed===0)){g.fillStyle='#ff2d2d';g.fillRect(-15.5,-6.5,1.6,3.5);g.fillRect(-15.5,3,1.6,3.5)}
+  if(c.emergency){const b=(G.time*6)%1<.5; g.fillStyle=b?'#2a63ff':'#9db7ff'; g.fillRect(-2,-6,4,4); g.fillStyle=b?'#9db7ff':'#2a63ff'; g.fillRect(-2,2,4,4);
+    if(b){g.fillStyle='rgba(42,99,255,.25)';g.beginPath();g.arc(0,0,20,0,7);g.fill()}}
+  if(!c.entered&&!c.cleared) drawIntent(c);
+  g.restore();
+  g.save(); g.globalAlpha=c.fade; g.fillStyle='#fff'; g.beginPath(); g.arc(c.x,c.y,7.6,0,7); g.fill();
+  g.fillStyle=c.emergency?'#1d1f21':c.color; g.font='700 12.5px "Barlow Condensed", sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(c.letter,c.x,c.y+.7); g.restore();
+}
+function drawIntent(c){ // badge behind the car: what its indicator says, drawn in the car's own frame
+  g.save(); g.translate(-30,0); g.scale(1.3,1.3);
+  g.fillStyle='rgba(20,24,22,.85)'; g.beginPath(); g.arc(0,0,8.5,0,7); g.fill();
+  const on=c.ind!=='none'; g.strokeStyle=on?'#ffb000':'#e8ece9'; g.fillStyle=g.strokeStyle; g.lineWidth=2; g.lineCap='round'; g.lineJoin='round';
+  g.beginPath();
+  if(!on){g.moveTo(-4.5,0);g.lineTo(3,0);g.stroke();g.beginPath();g.moveTo(5.5,0);g.lineTo(1.5,-3.5);g.lineTo(1.5,3.5);g.closePath();g.fill()}
+  else{const s=c.ind==='left'?-1:1; g.moveTo(-4.5,0);g.lineTo(0,0);g.quadraticCurveTo(2,0,2,s*2.5);g.stroke();g.beginPath();g.moveTo(2,s*6);g.lineTo(-1.5,s*2.2);g.lineTo(5.5,s*2.2);g.closePath();g.fill()}
+  g.restore();
+}
+function drawHint(){
+  const ctx=G.ctx;
+  g.save(); g.globalAlpha=.16; g.fillStyle='#f2b705';
+  const m=mainArms(ctx);
+  if(m&&!isControlled(ctx)){ g.beginPath(); m.forEach(a=>armRect(a,W,0,1200)); g.rect(-W,-W,2*W,2*W); g.fill() }
+  g.restore();
+  G.cars.forEach(c=>{ if(!c.cleared) drawRoute(c,.55) });
+  // priority badges: which cars must wait for whom right now
+  const pend=G.cars.filter(c=>!c.entered);
+  pend.forEach(X=>{ const waits=pend.filter(Y=>Y!==X&&conflict(X,Y)&&yields(X,Y,ctx,lightOf)); const red=!canMove(X,ctx,lightOf);
+    const txt=red?(ctx.control==='officer'?'officer: stop':'red: wait'):waits.length?'waits for '+waits.map(w=>w.letter).join(','):'may go';
+    if(red) waits.push(X);
+    g.font='600 11px Barlow, sans-serif'; const w=g.measureText(txt).width+10; const din=[-U[X.arm][0],-U[X.arm][1]], ro=rightOf(din);
+    const cx=X.arm%2===0?X.x-din[0]*48:X.x+ro[0]*24, cy=X.arm%2===0?X.y-din[1]*48:X.y+ro[1]*24; const x=cx-w/2, y=cy-7.5;
+    g.fillStyle=(waits.length||red)?'rgba(200,16,46,.92)':'rgba(29,134,72,.92)'; rr(x,y,w,15,7); g.fill(); g.fillStyle='#fff'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(txt,cx,y+8) });
+}
+function draw(){
+  g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,cv.width,cv.height);
+  let sx=0,sy=0; if(G.shake>0){sx=(Math.random()-.5)*6*G.shake;sy=(Math.random()-.5)*6*G.shake;G.shake=Math.max(0,G.shake-.05)}
+  const zs=scale*zoom;
+  g.setTransform(zs,0,0,zs,CX+sx*scale,CY+sy*scale);
+  drawGround(); drawControls();
+  if(hint) drawHint();
+  const a=G.cars[G.active]; if(a&&!hint) drawRoute(a,.8);
+  G.cars.forEach((c,i)=>{ if(c.fade>0) drawCar(c,i===G.active) });
+  drawOfficer();
+  g.setTransform(hudS,0,0,hudS,CX,CY);
+  drawCompass();
+  if(!fpOn&&G.def.drill&&!G.result&&G.time<4&&!G.cars[0].entered){
+    const txt='You are A. Read signs, markings and indicators.';
+    g.font='600 14px Barlow, sans-serif'; const w=Math.min(g.measureText(txt).width+24,HW*2-16);
+    g.fillStyle='rgba(20,24,22,.86)'; rr(-w/2,-HH+58,w,30,15); g.fill(); g.fillStyle='#fff'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(txt,0,-HH+73);
+  }
+  if(!fpOn&&G.active<0&&!G.result){
+    const txt=G.log.length?'Who goes next? Press 1–4 or tap a car':'Who goes first? Press 1–4 or tap a car';
+    g.font='600 14px Barlow, sans-serif'; const w=Math.min(g.measureText(txt).width+24,HW*2-16);
+    g.fillStyle='rgba(20,24,22,.86)'; rr(-w/2,-HH+58,w,30,15); g.fill(); g.fillStyle='#fff'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(txt,0,-HH+73);
+  }
+  const c=G.cars[G.active];
+  if(!fpOn&&c&&!G.result){
+    const kmh=Math.round(Math.abs(c.speed)*13);
+    const indTxt=c.player?(c.ind==='left'?' · ◀ indicating':c.ind==='right'?' · indicating ▶':' · no indicator'):'';
+    const txt=`${c.player?'YOU (A)':'CAR '+c.letter} · ${kmh} km/h${c.speed<-0.01?' R':''}${indTxt}`;
+    g.font='700 17px "Barlow Condensed", sans-serif'; const tw=g.measureText(txt).width+20; g.fillStyle='rgba(20,24,22,.86)'; const hy=touchOverlay?-HH+90:HH-38; rr(-HW+8,hy,tw,30,6); g.fill();
+    g.fillStyle='#fff'; g.textAlign='left'; g.textBaseline='middle'; g.fillText(txt,-HW+18,hy+16);
+  }
+}
+/* ---------- first-person view (three.js), built from the same world as the map ---------- */
+let fpOn=false, camMode='driver', R3=null, look=0, signShadow=true;
+function init3D(){
+  if(R3) return true;
+  if(!window.THREE) return false;
+  try{
+    const renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+    renderer.domElement.className='gl';
+    $('cw').insertBefore(renderer.domElement,$('cw').firstChild);
+    const scene=new THREE.Scene(); scene.background=new THREE.Color('#bcd5e8'); scene.fog=new THREE.Fog('#bcd5e8',280,700);
+    const cam=new THREE.PerspectiveCamera(66,4/3,0.5,2000);
+    scene.add(new THREE.HemisphereLight('#ffffff','#7d8f6a',0.85));
+    const sun=new THREE.DirectionalLight('#ffffff',0.55); sun.position.set(-200,300,150); scene.add(sun);
+    const far=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000),new THREE.MeshLambertMaterial({color:'#9dbb7f'}));
+    far.rotation.x=-Math.PI/2; far.position.y=-0.2; scene.add(far);
+    R3={renderer,scene,cam,world:null,cars:[],lights:[],officer:null,aniso:renderer.capabilities.getMaxAnisotropy(),texCache:{}};
+    return true;
+  }catch(e){return false}
+}
+function canvasTex(w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'));const t=new THREE.CanvasTexture(c);t.anisotropy=R3.aniso;return t}
+function withCtx(ctx,fn){const old=g; g=ctx; signShadow=false; try{fn()}finally{g=old; signShadow=true}}
+const MAT=c=>new THREE.MeshLambertMaterial({color:c});
+const BAS=c=>new THREE.MeshBasicMaterial({color:c});
+function box(w,h,d,mat,x=0,y=0,z=0){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);return m}
+function signTex(type){return R3.texCache[type]||(R3.texCache[type]=canvasTex(128,128,x=>withCtx(x,()=>{x.setTransform(3.6,0,0,3.6,64,64);drawSign(type,0,0)})))}
+function plateTex(){return canvasTex(128,96,x=>withCtx(x,()=>{x.setTransform(4,0,0,4,64,48);drawPlate(0,0)}))}
+function arrowTex(){return R3.texCache.arrow||(R3.texCache.arrow=canvasTex(64,48,x=>{x.fillStyle='#111';x.fillRect(0,0,64,48);x.strokeStyle='#30d158';x.lineWidth=7;x.lineCap='round';x.lineJoin='round';x.beginPath();x.moveTo(12,24);x.lineTo(48,24);x.moveTo(36,12);x.lineTo(50,24);x.lineTo(36,36);x.stroke()}))}
+function labelTex(c){
+  return canvasTex(256,96,x=>{
+    x.fillStyle='rgba(20,24,22,.86)'; x.beginPath(); x.roundRect?x.roundRect(4,4,248,88,44):x.rect(4,4,248,88); x.fill();
+    x.fillStyle=c.emergency?'#2a63ff':c.color; x.beginPath(); x.arc(48,48,34,0,7); x.fill();
+    x.fillStyle='#fff'; x.font='700 46px "Barlow Condensed", sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(c.letter,48,51);
+    const ind=c.ind; x.fillStyle=ind==='none'?'#e8ece9':'#ffb000'; x.font='600 30px Barlow, sans-serif'; x.textAlign='left';
+    x.fillText(ind==='none'?'straight':ind==='left'?'turns left':'turns right',94,50);
+  });
+}
+function facing(a){return Math.atan2(U[a][0],U[a][1])} // plane normal points out along the arm, towards approaching drivers
+function addPost(W3,a,pos,items,top){
+  const grp=new THREE.Group(); grp.position.set(pos[0],0,pos[1]); grp.rotation.y=facing(a);
+  grp.add(box(1.2,top,1.2,MAT('#9aa0a6'),0,top/2,0));
+  for(const it of items){
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(it.w,it.h),new THREE.MeshBasicMaterial({map:it.tex,transparent:true,alphaTest:.35,side:THREE.FrontSide}));
+    m.position.set(it.x||0,it.y,0.9); grp.add(m);
+    const back=new THREE.Mesh(new THREE.PlaneGeometry(it.w*.9,it.h*.9),MAT('#8d9399')); back.position.set(it.x||0,it.y,0.7); back.rotation.y=Math.PI; grp.add(back);
+  }
+  W3.add(grp); return grp;
+}
+function carMesh(c){
+  const grp=new THREE.Group(), body=MAT(c.color), dark=MAT('#26303a');
+  grp.add(box(30,7,16,body,0,6,0));
+  grp.add(box(15,6.5,14.5,dark,-2,12.8,0));
+  grp.add(box(11,1.2,13.6,body,-3,16.4,0));
+  if(c.emergency){grp.add(box(30.2,2,16.2,MAT('#ff7a00'),0,6,0))}
+  const wheel=new THREE.CylinderGeometry(3,3,2.2,12), wm=MAT('#1b1d1f');
+  [[10,8],[10,-8],[-10,8],[-10,-8]].forEach(([x,z])=>{const w=new THREE.Mesh(wheel,wm);w.rotation.x=Math.PI/2;w.position.set(x,3,z);grp.add(w)});
+  grp.add(box(.6,2,4,BAS('#fffbe6'),15.1,7.5,5)); grp.add(box(.6,2,4,BAS('#fffbe6'),15.1,7.5,-5));
+  const brake=[box(.6,2,3.6,BAS('#5a1212'),-15.1,8,5),box(.6,2,3.6,BAS('#5a1212'),-15.1,8,-5)]; brake.forEach(b=>grp.add(b));
+  const ind={left:[],right:[]};
+  for(const side of ['left','right']){const z=side==='left'?-7.4:7.4;
+    [[15.2,7.5],[-15.2,7.5],[6,10]].forEach(([x,y],i)=>{const m=box(i<2?.8:1.6,1.8,i<2?2.4:1.2,BAS('#5b4210'),x,y,z+(i===2?Math.sign(z)*0.6:0));ind[side].push(m);grp.add(m)})}
+  const blue=[]; if(c.emergency){blue.push(box(3,2,4,BAS('#2a63ff'),-2,17.8,-3.5),box(3,2,4,BAS('#9db7ff'),-2,17.8,3.5)); blue.forEach(b=>grp.add(b))}
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTex(c),depthTest:false,transparent:true})); sp.scale.set(26,9.75,1); sp.position.set(0,30,0); sp.renderOrder=5; grp.add(sp);
+  return {grp,ind,brake,blue,label:sp,lastInd:c.ind};
+}
+function build3D(){
+  if(!R3||!G) return;
+  if(R3.world){R3.scene.remove(R3.world); R3.world.traverse(o=>{if(o.geometry)o.geometry.dispose(); if(o.material&&o.material.map&&!Object.values(R3.texCache).includes(o.material.map)) o.material.map.dispose()})}
+  const W3=new THREE.Group(); R3.world=W3; R3.scene.add(W3);
+  const ctx=G.ctx;
+  const gt=canvasTex(2048,2048,x=>withCtx(x,()=>{x.setTransform(3.2,0,0,3.2,1024,1024);drawGround()}));
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(640,640),new THREE.MeshLambertMaterial({map:gt})); ground.rotation.x=-Math.PI/2; W3.add(ground);
+  // buildings and trees, on the same footprints the map draws
+  const wall=MAT('#ece6da');
+  const house=(x,z,w,d,roof)=>{W3.add(box(w,30,d,wall,x,15,z)); const r=new THREE.Mesh(new THREE.ConeGeometry(1,1,4),MAT(roof)); r.rotation.y=Math.PI/4; r.scale.set(w/Math.SQRT2,16,d/Math.SQRT2); r.position.set(x,38,z); W3.add(r)};
+  for(const d of decor){
+    if(d.t==='house') house(d.x,d.y,d.w,d.h,d.c);
+    else if(!onRoad(d.x,d.y)&&Math.abs(d.x)>W+10+d.r&&Math.abs(d.y)>W+10+d.r){
+      W3.add(box(2.4,12,2.4,MAT('#6b4f3a'),d.x,6,d.y));
+      const f=new THREE.Mesh(new THREE.SphereGeometry(d.r*1.05,12,10),MAT('#5f8c4b')); f.position.set(d.x,12+d.r*.8,d.y); W3.add(f);
+    }
+  }
+  const m=ctx.arms.indexOf(0); if(m>=0) house(U[m][0]*150,U[m][1]*150,80,56,'#b8644b');
+  // signs, plates, lights
+  R3.lights=[];
+  for(let a=0;a<4;a++){ if(!ctx.arms[a]) continue;
+    const s=ctx.sign[a], lit=ctx.control==='lights'||ctx.control==='lightsOff';
+    const signItems=s?[{tex:signTex(s),w:15,h:15,y:24}]:[];
+    if(s==='prio'&&isBent(ctx)) signItems.push({tex:plateTex(),w:14,h:10.5,y:13.5});
+    if(lit){
+      const grp=addPost(W3,a,signPos(a),ctx.arrow[a]?[{tex:arrowTex(),w:7,h:5.25,y:19,x:6.5}]:[],30);
+      grp.add(box(6,15,4,MAT('#1d1f21'),0,27,0));
+      const lamps=[0,1,2].map(i=>{const l=new THREE.Mesh(new THREE.CircleGeometry(1.7,16),BAS('#333')); l.position.set(0,31.5-i*4.5,2.05); grp.add(l); return l});
+      R3.lights.push({a,lamps});
+      if(signItems.length) addPost(W3,a,signPos(a,40),signItems,32);
+    } else if(signItems.length) addPost(W3,a,signPos(a),signItems,32);
+  }
+  // police officer
+  R3.officer=null;
+  if(ctx.control==='officer'){
+    const o=new THREE.Group(), blue=MAT('#1f3a6b');
+    W3.add(new THREE.Mesh(new THREE.CylinderGeometry(9,9,1.5,20),MAT('#e9e9e2')));
+    o.add(box(5,12,3.2,blue,0,9,0)); o.add(box(2,7,2,blue,-1.2,3.5,0)); o.add(box(2,7,2,blue,1.2,3.5,0));
+    const head=new THREE.Mesh(new THREE.SphereGeometry(1.9,12,10),MAT('#e8c4a0')); head.position.y=17; o.add(head);
+    const cap=new THREE.Mesh(new THREE.CylinderGeometry(2.2,2.2,1.2,14),MAT('#f4f4f1')); cap.position.y=18.8; o.add(cap);
+    const arms=box(24,1.6,1.6,blue,0,14,0); o.add(arms);
+    const raised=box(1.6,9,1.6,blue,2.8,19.5,0); o.add(raised);
+    W3.add(o); R3.officer={o,arms,raised};
+  }
+  R3.cars=G.cars.map(c=>{const cm=carMesh(c); W3.add(cm.grp); return cm});
+}
+function resize3D(){
+  if(!R3) return; const r=$('cw').getBoundingClientRect();
+  R3.renderer.setSize(Math.max(1,r.width),Math.max(1,r.height),false); R3.cam.aspect=r.width/Math.max(1,r.height); R3.cam.updateProjectionMatrix();
+}
+function render3D(dt){
+  if(!R3||!G||!R3.world) return;
+  const blink=(G.time*2.6)%1<.5, blinkB=(G.time*6)%1<.5;
+  const camCar=G.cars[G.active]||(G.def.drill?G.cars[0]:null);
+  G.cars.forEach((c,i)=>{const cm=R3.cars[i]; if(!cm) return;
+    cm.grp.visible=c.fade>0.05&&!(c===camCar&&camMode==='driver');
+    cm.grp.position.set(c.x,0,c.y); cm.grp.rotation.y=-c.h;
+    if(cm.lastInd!==c.ind){cm.label.material.map.dispose(); cm.label.material.map=labelTex(c); cm.lastInd=c.ind}
+    cm.label.visible=!c.entered&&!c.cleared;
+    for(const side of ['left','right']) cm.ind[side].forEach(m=>m.material.color.set(!c.cleared&&blink&&c.ind===side?'#ffb000':'#5b4210'));
+    cm.brake.forEach(m=>m.material.color.set(c.braking||(c.speed===0&&!c.cleared)?'#ff2d2d':'#5a1212'));
+    cm.blue.forEach((m,k)=>m.material.color.set((blinkB?k===0:k===1)?'#2a63ff':'#cfdcff'));
+  });
+  for(const L of R3.lights){
+    const st=G.ctx.control==='lightsOff'?'off':lightOf(L.a), yb=(G.time*2)%1<.5;
+    L.lamps[0].material.color.set(st==='red'||st==='redyellow'?'#ff3b30':'#3a2523');
+    L.lamps[1].material.color.set(st==='yellow'||st==='redyellow'||(st==='off'&&yb)?'#ffc400':'#3a3523');
+    L.lamps[2].material.color.set(st==='green'?'#30d158':'#233a28');
+  }
+  if(R3.officer){const go=G.ctl.stage==='green'; R3.officer.o.rotation.y=G.ctl.phase===1?0:Math.PI/2; R3.officer.arms.visible=go; R3.officer.raised.visible=!go}
+  const cam=R3.cam;
+  if(camCar){
+    const tgt=((keys.arrowright?1:0)-(keys.arrowleft?1:0))*(camMode==='chase'?0.45:0.8);
+    look+=(tgt-look)*Math.min(1,0.08*dt);
+    const h=camCar.h, fx=Math.cos(h), fz=Math.sin(h), lx=fz, lz=-fx;
+    if(camMode==='chase'){ // PPP: high camera behind the car; its direction follows the car slowly so turns don't swing the view
+      if(!R3.chase||R3.chaseCar!==camCar){R3.chase={h:h};R3.chaseCar=camCar}
+      let dh=h-R3.chase.h; dh=Math.atan2(Math.sin(dh),Math.cos(dh)); R3.chase.h+=dh*Math.min(1,0.035*dt);
+      const ah=R3.chase.h+look;
+      cam.position.set(camCar.x-Math.cos(ah)*78,82,camCar.y-Math.sin(ah)*78);
+      cam.lookAt(camCar.x+Math.cos(ah)*55,0,camCar.y+Math.sin(ah)*55);
+    } else {
+      cam.position.set(camCar.x+fx*1+lx*3.6, 11.5, camCar.y+fz*1+lz*3.6);
+      const ah=h+look; cam.lookAt(cam.position.x+Math.cos(ah)*100, 9, cam.position.z+Math.sin(ah)*100);
+    }
+  } else { cam.position.set(150,135,215); cam.lookAt(0,0,0) }
+  R3.renderer.render(R3.scene,cam);
+  updateDash(camCar);
+}
+let dashKey='';
+function updateDash(c){
+  const blink=(G.time*2.6)%1<.5;
+  const hd=c?headingName(c.h):'';
+  const key=c?`${c.letter}|${Math.round(Math.abs(c.speed)*13)}|${c.ind}|${blink}|${c.speed<-0.01}|${Math.round(look*4)}|${hd}`:'none';
+  if(key===dashKey) return; dashKey=key;
+  if(!c){$('dash').innerHTML='<span class="dl">Pick a car to sit in it</span>';return}
+  const L=c.ind==='left'&&blink, Rr=c.ind==='right'&&blink;
+  $('dash').innerHTML=`<span class="lamp ${L?'on':''}">◀</span><span class="spd">${Math.round(Math.abs(c.speed)*13)}<small>km/h${c.speed<-0.01?' R':''}</small></span><span class="lamp ${Rr?'on':''}">▶</span><span class="dl"><b class="hd">Heading ${hd}</b> · ${c.player?'You (A)':'Car '+c.letter}${Math.abs(look)>0.3?(look>0?' · looking right':' · looking left'):''}</span>`;
+}
+function headingName(h){const d=((h*180/Math.PI)%360+360)%360; return ['east','south-east','south','south-west','west','north-west','north','north-east'][Math.round(d/45)%8]}
+function hudPrompt(){
+  if(!G||G.result) return '';
+  if(G.def.drill&&G.time<4&&!G.cars[0].entered) return 'You are A. Read signs, markings and indicators.';
+  if(G.active<0) return G.log.length?'Who goes next? Press 1–4 or tap a car on the map':'Who goes first? Press 1–4 or tap a car on the map';
+  return '';
+}
+function setView(v){ // 'map' | 'chase' | 'driver'
+  if(v!=='map'&&!init3D()){toast('PPP and FPP need WebGL, which this browser has turned off.');v='map'}
+  const was=fpOn; fpOn=v!=='map'; if(fpOn) camMode=v; R3&&(R3.chase=null);
+  $('cw').classList.toggle('fp',fpOn);
+  $('vMap').setAttribute('aria-pressed',v==='map'); $('vChase').setAttribute('aria-pressed',v==='chase'); $('vDrv').setAttribute('aria-pressed',v==='driver');
+  try{localStorage.setItem('rvl-view',v)}catch(e){}
+  if(R3){R3.cam.fov=camMode==='chase'?74:66; R3.cam.updateProjectionMatrix()}
+  resize(); if(fpOn){resize3D(); if(!was) build3D()}
+}
+function setFP(on){ setView(on?camMode:'map') }
+const curView=()=>fpOn?camMode:'map';
+window.addEventListener('resize',()=>{if(fpOn)resize3D()});
+
+function drawCompass(){ // labels at the end of each road, in screen space so zoom never moves them
+  const big=!fpOn&&HW>170&&HH>=300, r=fpOn?9:13, f=fpOn?11:15;
+  const tight=HH<300;
+  const sy=fpOn?HH-16:!touchOverlay?HH-56:(HW>300?HH-20:HH-120);
+  const spots=[['N','North',0,fpOn?-HH+16:tight?-HH+66:-HH+130],['E','East',HW-(fpOn?16:40),0],['S','South',0,sy],['W','West',-HW+(fpOn?16:40),0]];
+  for(const [k,name,x,y] of spots){
+    g.fillStyle='rgba(255,255,255,.95)'; g.beginPath(); g.arc(x,y,r,0,7); g.fill();
+    g.strokeStyle='#1d1f21'; g.lineWidth=2; g.stroke();
+    g.fillStyle='#1d1f21'; g.font=`700 ${f}px "Barlow Condensed", sans-serif`; g.textAlign='center'; g.textBaseline='middle'; g.fillText(k,x,y+1);
+    if(big){ g.font='600 11px Barlow, sans-serif'; const tw=g.measureText(name).width+10, ty=y+(k==='S'?-r-12:r+12);
+      const tx=k==='E'?x-4:k==='W'?x+4:x;
+      g.fillStyle='rgba(255,255,255,.9)'; rr(tx-tw/2,ty-8,tw,16,8); g.fill(); g.fillStyle='#1d1f21'; g.fillText(name,tx,ty+.5) }
+  }
+}
+function loop(t){
+  const dt=Math.min(2.5,(t-lastT)/16.667); lastT=t;
+  if(G&&tab==='course'){update(dt); draw(); if(fpOn) render3D(dt);
+    const pr=fpOn?hudPrompt():''; const pe=$('fpPrompt'); if(pe.textContent!==pr) pe.textContent=pr; pe.hidden=!pr }
+  requestAnimationFrame(loop);
+}
+
+/* ---------- German examiner voice (browser speech synthesis) ---------- */
+let voiceOn=true; try{voiceOn=localStorage.getItem('rvl-voice')!=='0'}catch(e){}
+let deVoice=null, gestured=false, pendingSay=null, subTimer=0;
+const hasTTS='speechSynthesis' in window;
+function pickVoice(){try{const vs=speechSynthesis.getVoices();deVoice=vs.find(v=>/^de[-_]DE/i.test(v.lang))||vs.find(v=>/^de/i.test(v.lang))||null}catch(e){}}
+if(hasTTS){pickVoice(); try{speechSynthesis.onvoiceschanged=pickVoice}catch(e){}}
+function showSub(t){const el=$('sub'); el.textContent='Prüfer: „'+t+'“'; el.hidden=false; clearTimeout(subTimer); subTimer=setTimeout(()=>el.hidden=true,5500)}
+function say(text){
+  showSub(text);
+  if(!voiceOn||!hasTTS) return;
+  if(!gestured){pendingSay=text;return}
+  try{speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang='de-DE'; if(deVoice) u.voice=deVoice; u.rate=0.95; speechSynthesis.speak(u)}catch(e){}
+}
+function onGesture(){ if(gestured) return; gestured=true; if(pendingSay){const p=pendingSay; pendingSay=null; say(p)} }
+window.addEventListener('keydown',onGesture,true); window.addEventListener('pointerdown',onGesture,true);
+function setVoice(on){
+  voiceOn=on; try{localStorage.setItem('rvl-voice',on?'1':'0')}catch(e){}
+  $('voiceBtn').textContent=on?'Voice: German on (M)':'Voice: off (M)';
+  $('voiceBtn').setAttribute('aria-pressed',on);
+  if(!on){try{speechSynthesis.cancel()}catch(e){}} else if(G) announce();
+  if(on&&!hasTTS) toast('This browser has no speech output. The German instructions still show as subtitles.');
+}
+function instructionDE(c){
+  const t=turnType(c.arm,c.exit);
+  return t==='left'?'Nach links.':t==='right'?'Nach rechts.':'Geradeaus.';
+}
+function announce(){
+  if(!G||G.result) return;
+  if(G.def.drill) say(instructionDE(G.cars[0]));
+  else { const c=G.cars[G.active]; say(c?`${c.letter}, ${instructionDE(c).toLowerCase()}`:'Wer fährt zuerst?') }
+}
+const FAIL_DE={'Priority violated':'Vorfahrt beachten.','No full stop':'Ganz anhalten.','Ran a red light':'Rot.','Ran the yellow':'Gelb, anhalten.',
+  'Too early':'Noch nicht, Rot-Gelb.','Ignored the officer':'Polizist, Halt.','Wrong indicator':'Blinker.','Wrong route':'Falsche Richtung.',
+  'Collision':'Unfall.','Blocked the junction':'Kreuzung nicht frei.'};
+
+/* ---------- UI ---------- */
+function signLabel(a){
+  const ctx=G.ctx;
+  if(ctx.kind[a]==='driveway') return 'Leaving a driveway';
+  if(ctx.control==='lights') return 'Traffic light'+(ctx.arrow[a]?' + green arrow':'');
+  if(ctx.control==='officer') return 'Police officer directing';
+  const s=ctx.sign[a];
+  let base=s==='yield'?'Yield sign (205)':s==='stop'?'Stop sign (206) + stop line':s==='prio'?(isBent(ctx)?'Priority road, bends (306)':'Priority road (306)'):s==='prio301'?'Priority here (301)':'No sign';
+  if(s==='yield') base+=ctx.teeth[a]?' + shark teeth':' + give-way line';
+  return (ctx.control==='lightsOff'?'Lights off · ':'')+base;
+}
+const IND_TXT={none:'no indicator',left:'left indicator',right:'right indicator'};
+function renderPanel(){
+  const d=G.def, drill=!!d.drill;
+  $('cat').textContent=drill?`Course · ${d.li+1} of ${LAYOUTS.length} · Round ${d.ri+1} of ${roundsFor(LAYOUTS[d.li]).length}`:d.cat;
+  $('title').textContent=d.title; $('brief').textContent=d.brief;
+  const dots=$('dots');
+  if(drill){ dots.hidden=false;
+    dots.innerHTML=roundsFor(LAYOUTS[d.li]).map((r,i)=>`<button type="button" data-r="${i}" class="dot ${done.has(`c:${d.li}:${i}`)?'ok':''} ${i===d.ri?'cur':''}" title="Round ${i+1}: from the ${ARM_NAME[r.arm]}, ${TURN_WORD[turnType(r.arm,r.exit)]}" aria-label="Round ${i+1}">${'NESW'[r.arm]}${{straight:'↑',left:'↰',right:'↱'}[turnType(r.arm,r.exit)]}</button>`).join('');
+  } else dots.hidden=true;
+  $('carlist').innerHTML=G.cars.map((c,i)=>{
+    const st=(c.cleared||c.exited)?'<span class="pill thru">through</span>':c.entered?'<span class="pill go">crossing</span>':(i===G.active&&!c.ai)?'<span class="pill go">'+(c.player?'you':'driving')+'</span>':'<span class="pill">waiting</span>';
+    const t=turnType(c.arm,c.exit);
+    const what=c.player?`You: from the ${ARM_NAME[c.arm]}, ${TURN_WORD[t]}`:drill?`From the ${ARM_NAME[c.arm]} · ${IND_TXT[c.ind]}`:`From the ${ARM_NAME[c.arm]}, ${TURN_WORD[t]}`;
+    return `<li class="${i===G.active?'active':''} ${c.cleared?'done':''}" data-i="${i}"><span class="chip" style="background:${c.emergency?'#2a63ff':c.color}">${c.letter}</span>
+      <span style="min-width:0"><span class="what">${what}${c.emergency?' · blue lights':''}</span><br><span class="sign">${drill?'':(i+1)+' · '}${signLabel(c.arm)}</span></span>${st}</li>`}).join('');
+  const cDone=[...done].filter(x=>String(x).startsWith('c:')).length, pDone=[...done].filter(x=>String(x).startsWith('p:')).length;
+  $('progress').textContent=mode==='course'?`${cDone} / ${TOTAL_ROUNDS} rounds`:`${pDone} / ${SC.length}`;
+  $('scenario').value=d.random?'':String(drill?d.li:scIndex);
+  $('hintBtn').textContent=hint?'Hide priority (H)':'Show priority (H)';
+  $('indRow').hidden=!drill;
+  const pi=G.cars[0]&&G.cars[0].ind; $('tq').classList.toggle('on',pi==='left'); $('te').classList.toggle('on',pi==='right'); $('indL').classList.toggle('on',pi==='left'); $('indR').classList.toggle('on',pi==='right');
+}
+$('carlist').addEventListener('click',e=>{const li=e.target.closest('li');if(li)selectCar(+li.dataset.i)});
+$('dots').addEventListener('click',e=>{const b=e.target.closest('[data-r]'); if(b) gotoRound(G.def.li,+b.dataset.r)});
+function selectCar(i){
+  if(!G||G.result) return;
+  if(G.def.drill){ if(i!==0) toast('In the course you drive car A. The others drive themselves.'); return }
+  const c=G.cars[i]; if(!c||c.cleared) return;
+  const cur=G.cars[G.active];
+  if(cur&&inJ(cur)&&cur!==c){toast(`Finish crossing with ${cur.letter} first`);return}
+  if(cur&&cur!==c&&cur.exited) cur.autoOut=true;
+  G.active=i; renderPanel(); announce();
+}
+function setInd(side){
+  if(!G||!G.def.drill||G.result) return; const c=G.cars[0];
+  if(c.entered){toast('Set your indicator before the junction');return}
+  c.ind=c.ind===side?'none':side; renderPanel();
+}
+function cycleCar(){ if(!G) return; const n=G.cars.length; for(let k=1;k<=n;k++){const i=(G.active+k+n)%n; if(!G.cars[i].cleared){selectCar(i);return}} }
+function toast(msg){const t=$('toast');t.textContent=msg;t.style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.opacity=0,2200)}
+function remember(){try{localStorage.setItem('rvl-pos',JSON.stringify({mode,li,ri,idx:scIndex}))}catch(e){}}
+function restart(){load(G.def.drill?makeRound(G.def.li,G.def.ri):G.def); cv.focus({preventScroll:true})}
+function goto(i){mode='puzzle'; scIndex=i; seed=i+1; makeDecor(); load(buildDef(SC[i])); fillSelect(); remember()}
+function gotoRound(l,r){mode='course'; li=l; ri=r; seed=l*31+r+500; makeDecor(); load(makeRound(l,r)); fillSelect(); remember()}
+function nextSc(){
+  if(G.def.random){randomSc();return}
+  if(mode==='course'){ let r=ri+1,l=li; if(r>=roundsFor(LAYOUTS[l]).length){r=0;l=(l+1)%LAYOUTS.length} gotoRound(l,r) }
+  else goto((scIndex+1)%SC.length);
+  cv.focus({preventScroll:true});
+}
+function randomSc(){
+  if(mode==='course'){const l=Math.floor(Math.random()*LAYOUTS.length);gotoRound(l,Math.floor(Math.random()*roundsFor(LAYOUTS[l]).length))}
+  else { seed=Math.floor(Math.random()*1e6); makeDecor(); load(randomDef()); }
+  cv.focus({preventScroll:true});
+}
+window.restart=restart; window.nextSc=nextSc;
+
+const sel=$('scenario'); let filledFor=null;
+function fillSelect(){
+  if(filledFor===mode) return; filledFor=mode; sel.innerHTML='';
+  if(mode==='course'){
+    LAYOUTS.forEach((l,i)=>{const o=document.createElement('option');o.value=i;o.textContent=`${i+1}. ${l.title} (${roundsFor(l).length} rounds)`;sel.appendChild(o)});
+  } else {
+    const o0=document.createElement('option'); o0.value=''; o0.disabled=true; o0.textContent='Random situation'; sel.appendChild(o0);
+    const cats={};
+    SC.forEach((s,i)=>{ if(!cats[s.cat]){cats[s.cat]=document.createElement('optgroup');cats[s.cat].label=s.cat;sel.appendChild(cats[s.cat])}
+      const o=document.createElement('option'); o.value=i; o.textContent=`${i+1}. ${s.title}`; cats[s.cat].appendChild(o) });
+  }
+}
+sel.addEventListener('change',()=>{ if(sel.value==='') return;
+  if(mode==='course'){const l=+sel.value, rs=roundsFor(LAYOUTS[l]); let r=rs.findIndex((_,i)=>!done.has(`c:${l}:${i}`)); gotoRound(l,r<0?0:r)} else goto(+sel.value);
+  sel.blur() });
+let tab='course';
+function setTab(t){ tab=t; $('courseView').hidden=t!=='course'; $('instr').hidden=t!=='instr';
+  $('tabCourse').setAttribute('aria-selected',t==='course'); $('tabInstr').setAttribute('aria-selected',t==='instr'); keys={};
+  if(t==='instr'){try{speechSynthesis.cancel()}catch(e){}} else requestAnimationFrame(()=>{resize(); if(fpOn) resize3D()}); }
+$('tabCourse').onclick=()=>setTab('course'); $('tabInstr').onclick=()=>setTab('instr');
+$('toInstr').onclick=e=>{e.preventDefault(); setTab('instr'); window.scrollTo(0,0)};
+$('randomBtn').onclick=randomSc;
+$('resetBtn').onclick=restart;
+$('hintBtn').onclick=()=>{hint=!hint;renderPanel()};
+$('answerBtn').onclick=()=>{const a=$('answer'); a.hidden=!a.hidden;
+  const list=G.def.drill?playerSummary():relationsList();
+  a.innerHTML=`<b>${stepsText(G.solution)}</b>${G.def.lesson?`<p style="margin:6px 0 0">${G.def.lesson}</p>`:''}<ul style="margin:6px 0 0;padding-left:18px">${[...new Set(list)].map(r=>`<li>${r}</li>`).join('')}</ul>`};
+$('assistBtn').onclick=()=>setAssist(!assist); setAssist(assist);
+function setZoom(d){let i=ZOOMS.indexOf(zoom); i=d===0?(i+1)%ZOOMS.length:Math.max(0,Math.min(ZOOMS.length-1,i+d)); zoom=ZOOMS[i]; $('zLbl').textContent=Math.round(zoom*100)+'%'; try{localStorage.setItem('rvl-zoom',String(zoom))}catch(e){}}
+$('vMap').onclick=()=>setView('map'); $('vChase').onclick=()=>setView('chase'); $('vDrv').onclick=()=>setView('driver');
+const playEl=document.querySelector('.play');
+function applyFS(on){ playEl.classList.toggle('isfs',on); document.body.classList.toggle('fs-lock',on); $('fsBtn').innerHTML=on?'<span class="lg">Exit full screen (F)</span><span class="sm">Exit ⤡</span>':'<span class="lg">Full screen (F)</span><span class="sm">Full ⤢</span>';
+  requestAnimationFrame(()=>{resize(); if(fpOn) resize3D()}) }
+function toggleFS(){
+  const real=document.fullscreenElement||document.webkitFullscreenElement;
+  if(real){ (document.exitFullscreen||document.webkitExitFullscreen).call(document); return }
+  if(playEl.classList.contains('isfs')){ applyFS(false); return }
+  const req=playEl.requestFullscreen||playEl.webkitRequestFullscreen;
+  applyFS(true);
+  if(req){ try{ const pr=req.call(playEl); if(pr&&pr.catch) pr.catch(()=>{}) }catch(e){} }
+}
+['fullscreenchange','webkitfullscreenchange'].forEach(ev=>document.addEventListener(ev,()=>{ if(!(document.fullscreenElement||document.webkitFullscreenElement)) applyFS(false); else applyFS(true) }));
+$('fsBtn').onclick=toggleFS;
+window.addEventListener('keydown',e=>{ if(e.key==='Escape'&&playEl.classList.contains('isfs')&&!document.fullscreenElement) applyFS(false) });
+$('voiceBtn').onclick=()=>setVoice(!voiceOn); $('voiceBtn').textContent=voiceOn?'Voice: German on (M)':'Voice: off (M)'; $('voiceBtn').setAttribute('aria-pressed',voiceOn);
+$('zIn').onclick=()=>setZoom(1); $('zOut').onclick=()=>setZoom(-1); $('zLbl').textContent=Math.round(zoom*100)+'%';
+$('indL').onclick=()=>setInd('left'); $('indR').onclick=()=>setInd('right');
+$('tq').onclick=()=>setInd('left'); $('te').onclick=()=>setInd('right');
+
+window.addEventListener('keydown',e=>{
+  if(e.target.tagName==='SELECT'||e.metaKey||e.ctrlKey||e.altKey||tab!=='course') return;
+  const k=e.key.toLowerCase();
+  if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)){
+    keys[k]=true; e.preventDefault();
+    if(G&&G.active<0&&!G.result&&(k==='w'||k==='arrowup')) toast('Pick a car first: press 1–4 or tap one');
+    return;
+  }
+  if(['1','2','3','4'].includes(k)){selectCar(+k-1);return}
+  if(k==='q'){ if(G&&G.def.drill) setInd('left'); else cycleCar(); return}
+  if(k==='e'){ if(G&&G.def.drill) setInd('right'); else cycleCar(); return}
+  if(k==='c'){cycleCar();return}
+  if(k==='r'){restart();return}
+  if(k==='n'){nextSc();return}
+  if(k==='h'){hint=!hint;renderPanel();return}
+  if(k==='+'||k==='='){setZoom(1);return}
+  if(k==='-'||k==='_'){setZoom(-1);return}
+  if(k==='z'){setZoom(0);return}
+  if(k==='v'){const order=['map','chase','driver']; setView(order[(order.indexOf(curView())+1)%3]);return}
+  if(k==='f'){toggleFS();return}
+  if(k==='g'){setAssist(!assist);toast(assist?'Steering assist on: you control gas, brake and indicators':'Steering assist off: steer with A / D');return}
+  if(k==='m'){setVoice(!voiceOn);return}
+});
+window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
+window.addEventListener('blur',()=>{keys={}});
+document.querySelectorAll('#touch [data-k]').forEach(b=>{
+  const k=b.dataset.k;
+  b.addEventListener('pointerdown',e=>{e.preventDefault();keys[k]=true;try{b.setPointerCapture(e.pointerId)}catch(_){}
+    if(k==='w'){const r=playEl.getBoundingClientRect(); if(!playEl.classList.contains('isfs')&&(r.top<-4||r.bottom>innerHeight+4)) playEl.scrollIntoView({block:'end',behavior:'smooth'})}if(G&&G.active<0&&k==='w')toast('Tap a car first')});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>keys[k]=false));
+});
+cv.addEventListener('pointerdown',e=>{
+  if(!G) return;
+  if(fpOn){ setView('map'); return } const r=cv.getBoundingClientRect();
+  const x=((e.clientX-r.left)/r.width*cv.width-CX)/scale/zoom, y=((e.clientY-r.top)/r.height*cv.height-CY)/scale/zoom;
+  let best=-1,bd=26*26; G.cars.forEach((c,i)=>{if(c.cleared)return;const d=(c.x-x)**2+(c.y-y)**2;if(d<bd){bd=d;best=i}});
+  if(best>=0) selectCar(best);
+});
+
+function start(data){
+  let pos={mode:'course',li:0,ri:0,idx:0}; try{pos={...pos,...JSON.parse(localStorage.getItem('rvl-pos')||'{}')}}catch(e){}
+  if(data&&data.mode) pos={...pos,...data};
+  resize();
+  { const l=(pos.li>=0&&pos.li<LAYOUTS.length)?pos.li:0, n=roundsFor(LAYOUTS[l]).length; gotoRound(l,(pos.ri>=0&&pos.ri<n)?pos.ri:0) }
+  try{const v=localStorage.getItem('rvl-view'); if(v==='chase'||v==='driver') setView(v)}catch(e){}
+  requestAnimationFrame(loop);
+}
+window.claude?.hot?.snapshot?.(()=>({mode,li,ri,idx:scIndex}));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
+</body>
+</html>
